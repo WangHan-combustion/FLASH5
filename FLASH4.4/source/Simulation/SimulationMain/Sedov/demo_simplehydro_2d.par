@@ -83,12 +83,12 @@ plot_var_3 = "temp"
 
 #  Adaptvie Grid refinement parameters
 
-lrefine_max     = 6
+lrefine_max     = 4
 refine_var_1 = "dens"
 refine_var_2 = "pres"
 
 
-# Uniform Grid specific parameters 
+# Uniform Grid specific parameters
 # see note below for more explanation
 
 #iGridSize = 8   #global number of gridpoints along x, excluding gcells
@@ -103,17 +103,17 @@ kProcs = 1
 # These are the processors along each of the dimensions
 #FIXEDBLOCKSIZE mode ::
 # When using fixed blocksize, iGridSize etc are redundant in
-# runtime parameters. These quantities are calculated as 
+# runtime parameters. These quantities are calculated as
 # iGridSize = NXB*iprocs
 # jGridSize = NYB*jprocs
 # kGridSize = NZB*kprocs
 #NONFIXEDBLOCKSIZE mode ::
 # iGridSize etc must be specified. They constitute the global
-# number of grid points in the physical domain without taking 
+# number of grid points in the physical domain without taking
 # the guard cell into account. The local blocksize is calculated
 # as iGridSize/iprocs  etc.
- 
- 
+
+
 ## -------------------------------------------------------------##
 ##  SWITCHES SPECIFIC TO THE UNSPLIT HYDRO SOLVER               ##
 #	I. INTERPOLATION SCHEME:
