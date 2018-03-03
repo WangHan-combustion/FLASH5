@@ -9,8 +9,15 @@
 !!  accessing blocks or tiles in the domain that exist only at a single, given
 !!  refinement level. 
 !!
-!!  Note that this iterator is meant only for internal FLASH use with 
-!!  block_iterator_t.  No other code should need to use this code directly.
+!! This module is a facade pattern that maps the AMReX Fortran iterator onto 
+!! the interface required presently by FLASH.
+!!
+!! We can use the AMReX iterator directly in the code,
+!! or client code will gain access to it through implementation-specific 
+!! code like gr_getBlkIterator.
+!!
+!! This is a variant that uses type(amrex_mfiter) as underlying iterator.
+!! It iterates only over block at the same, given refinement level.
 !!
 !! SEE ALSO
 !!  block_iterator_t
@@ -24,8 +31,8 @@ module block_1lev_iterator
 
     use amrex_multifab_module, ONLY : amrex_multifab
     use amrex_multifab_module, ONLY : amrex_mfiter, &
-                                      amrex_mfiter_build, &
-                                      amrex_mfiter_destroy
+                                    amrex_mfiter_build, &
+                                    amrex_mfiter_destroy
 
     implicit none
 
@@ -36,33 +43,33 @@ module block_1lev_iterator
     !! NAME
     !!  block_1lev_iterator_t
     !!
-    !! DESCRIPTION
-    !!  For AMReX, this class is being used under the hood of the
-    !!  block_iterator_t class and should not be used elsewhere.  As a result of
-    !!  this restriction, for instance, there is no need to give access to
-    !!  block_metadata_t structures.
-    !!
-    !!  Note that the value of level is specified using FLASH's 1-based level
-    !!  indexing scheme.
-    !!
     !!****
     type, public :: block_1lev_iterator_t
-        type(amrex_mfiter),   private, pointer :: mfi     => NULL()
-        type(amrex_multifab), private, pointer :: mf      => NULL()
-        integer,              private          :: level   = INVALID_LEVEL
-        logical,              private          :: isValid = .FALSE.
-        integer,              allocatable      :: dummy
+        type(amrex_mfiter),POINTER :: mfi   => NULL()
+        integer :: nodetype    = LEAF 
+        integer                 :: level    = INVALID_LEVEL
+        logical                 :: isValid = .FALSE.
+        real,POINTER            :: fp(:,:,:,:)
+        type(amrex_multifab),POINTER :: mf  => NULL()
     contains
         procedure, public :: is_valid
+        procedure, public :: first
         procedure, public :: next
         procedure, public :: grid_index
         procedure, public :: tilebox
         procedure, public :: fabbox
+        procedure, public :: dataPtr
+#if !defined(__GFORTRAN__) || (__GNUC__ > 4)
+        final             :: destroy_iterator
+#else
         procedure, public :: destroy_iterator
+#endif
     end type block_1lev_iterator_t
 
     interface block_1lev_iterator_t
+        procedure :: init_iterator_mf
         procedure :: init_iterator
+        procedure :: init_iterator_mfa
     end interface block_1lev_iterator_t
 
 contains
@@ -73,63 +80,119 @@ contains
     !!  block_1lev_iterator_t
     !!
     !! SYNOPOSIS
-    !!  itor = block_1lev_iterator_t(integer(IN)         :: nodetype,
-    !!                               integer(IN)           :: level, 
-    !!                               logical(IN), optional :: tiling)
+    !!  block_1lev_iterator_t itor = block_1lev_iterator_t(integer(IN)         :: nodetype,
+    !!                                           integer(IN), optional :: level)
     !!
     !! DESCRIPTION
-    !!  Construct an iterator for walking across a specific subset of blocks or
-    !!  tiles within the the given refinement level.  The iterator is already
-    !!  set to the first matching block/tile.
+    !!  Construct an iterator for walking across a specific subset of blocks
+    !!  within the current paramesh octree structure.  The iterator is already
+    !!  set to the first matching block.
     !!
     !! ARGUMENTS
     !!  nodetype - the class of blocks to iterate over (e.g. LEAF, ACTIVE_BLKS)
-    !!  level    - iterate only over blocks/tiles located at this level of
-    !!             refinement.  Note that the level value must be given with
-    !!             respect to FLASH's 1-based level index scheme.
-    !!  tiling   - an optional optimization hint.  If TRUE, then the iterator will
-    !!             walk across all associated blocks on a tile-by-tile basis *if*
-    !!             the implementation supports this feature.  If a value is not
-    !!             given, is FALSE, or the implementation does not support tiling,
-    !!             the iterator will iterate on a block-by-block basis.
-    !!
-    !! RETURN VALUE
-    !!  The initialized iterator
+    !!  level    - if nodetype is LEAF, PARENT, ANCESTOR, or REFINEMENT, then 
+    !!             iterate only over blocks located at this level of 
+    !!             octree structure. !DEVNOTE: nodetype is WIP!
     !!
     !! SEE ALSO
     !!  constants.h
     !!****
-    function init_iterator(nodetype, level, tiling) result(this)
-      use gr_physicalMultifabs,  ONLY : unk
-      use amrex_amrcore_module,  ONLY : amrex_get_finest_level
+  function init_iterator_mf(nodetype, mf, level, tiling) result(this)
+    use amrex_multifab_module, ONLY : amrex_multifab
 
+        type(block_1lev_iterator_t)        :: this
         integer, intent(IN)           :: nodetype
-      integer, intent(IN)           :: level
-      logical, intent(IN), optional :: tiling
-      type(block_1lev_iterator_t)   :: this
+        type(amrex_multifab),intent(IN),TARGET :: mf
+        integer, intent(IN), optional :: level
+        logical, intent(IN), optional :: tiling
 
-      integer :: finest_level
+        this%nodetype = nodetype
+        if (present(level)) then
+            this%level = level
+        end if
+ 
+        allocate(this%mfi)
 
-      finest_level = amrex_get_finest_level() + 1
-      if (level > finest_level) then
-          call Driver_abortFlash("[init_iterator] No unk multifab for level")
-      end if
+        ! DEVNOTE: the AMReX iterator is not built based on nodetype.
+        ! It appears that we get leaves every time.  !DEV: REALLY? Not ALL_BLKS??
 
-      allocate(this%mfi)
+        ! Initial iterator is not primed.  Advance to first compatible block.
+        call amrex_mfiter_build(this%mfi,mf,tiling=tiling)
+        this%mf => mf
+!!$        print*,'block_1lev_iterator: init_iterator_mf  on this=',this%isValid,this%level,associated(this%mfi)
+        this%isValid = .TRUE.
+        call this%next()
+  end function init_iterator_mf
 
-      this%level = level
-      this%mf => unk(level-1)
-      call amrex_mfiter_build(this%mfi, this%mf, tiling=tiling)
+  function init_iterator_mfa(nodetype, mfArray, level, tiling) result(this)
+    use amrex_multifab_module, ONLY : amrex_multifab
 
-      ! Set to True so that next() works
-      this%isValid = .TRUE.
+        type(block_1lev_iterator_t)        :: this
+        integer, intent(IN)           :: nodetype
+        type(amrex_multifab),intent(IN),TARGET :: mfArray(0:*)
+        integer, intent(IN), optional :: level
+        logical, intent(IN), optional :: tiling
 
-      ! Initial MFIter is not primed.  Advance to first compatible block.
-      call this%next()
+        this%nodetype = nodetype
+        if (present(level)) then
+            this%level = level
+        end if
+ 
+        allocate(this%mfi)
+
+        ! DEVNOTE: the AMReX iterator is not built based on nodetype.
+        ! It appears that we get leaves every time.
+
+        ! Initial iterator is not primed.  Advance to first compatible block.
+        call amrex_mfiter_build(this%mfi,mfArray(level-1),tiling=tiling)
+        this%mf => mfArray(level-1)
+!!$        print*,'block_1lev_iterator: init_iterator_mfa on this=',this%isValid,this%level,associated(this%mfi)
+        this%isValid = .TRUE.
+        call this%next()
+     end function init_iterator_mfa
+
+    function init_iterator(nodetype, level, tiling) result(this)
+      use amrex_multifab_module, ONLY : amrex_multifab
+      use gr_physicalMultifabs,  ONLY : Unk
+
+        type(block_1lev_iterator_t)        :: this
+        integer, intent(IN)           :: nodetype
+        integer, intent(IN), optional :: level
+        logical, intent(IN), optional :: tiling
+
+        type(amrex_multifab),POINTER :: mfArray(:)
+        type(amrex_multifab),POINTER :: mf
+
+        this%nodetype = nodetype
+        if (present(level)) then
+            this%level = level
+        end if
+ 
+        allocate(this%mfi)
+
+        if (present(level)) then
+           mfArray => Unk
+           mf => Unk(level-1)
+!!$           print*,'amrex_multifab_nghost(mf)=',mf%nghost()
+!!$           print*,'ABOUT TO call amrex_mfiter_build,size(mfArray)=',size(mfArray)
+!!$           call amrex_mfiter_build(this%mfi,mfArray(level),tiling=tiling)
+           call amrex_mfiter_build(this%mfi,mf,tiling=tiling)
+!!$           print*,'amrex_multifab_nghost(mf)=',mf%nghost()
+           this%mf => mfArray(level-1)
+        else
+           mf => Unk(0)
+           call amrex_mfiter_build(this%mfi,mf,tiling=tiling)
+           this%mf => mf
+        end if
+!!$        print*,'block_1lev_iterator: init_iterator     on this=',this%isValid,this%level,associated(this%mfi)
+        this%isValid = .TRUE.
+        call this%next()
     end function init_iterator
 
+!#if !defined(__GFORTRAN__) || (__GNUC__ > 4)
     !!****im* block_1lev_iterator_t/destroy_iterator
-
+    !!
+    !! NAME
     !!  destroy_iterator
     !!
     !! SYNPOSIS
@@ -150,7 +213,34 @@ contains
          this%isValid = .FALSE.
       end if
     end subroutine destroy_iterator
+!#endif
 
+    !!****m* block_1lev_iterator_t/first
+    !!
+    !! NAME
+    !!  first
+    !!
+    !! SYNPOSIS
+    !!  call itor%first() 
+    !!
+    !! DESCRIPTION
+    !!  Reset iterator to the initial block managed by process
+    !!
+    !!****
+    subroutine first(this)
+        class(block_1lev_iterator_t), intent(INOUT) :: this
+
+        print*,'block_1lev_%first: IGNORING ATTEMPT  on this=',this%isValid,this%level,associated(this%mfi)
+
+!!$        ! reset to before first valid block
+!!$        print*,'block_1lev_%first: about to do clear on this=',this%isValid,this%level,associated(this%mfi)
+!!$        call this%mfi%clear()
+!!$        this%isValid = .TRUE.
+!!$        ! Initial iterator is not primed.  Advance to first compatible block.
+!!$        print*,'block_1lev_%first: about to do next on this=',this%isValid,this%level,associated(this%mfi)
+!!$        call this%next()
+    end subroutine first
+ 
     !!****m* block_1lev_iterator_t/is_valid
     !!
     !! NAME
@@ -160,10 +250,10 @@ contains
     !!  logical valid = itor%is_valid()
     !!
     !! DESCRIPTION
-    !!  Determine if the iterator is currently set to a valid block/tile.
+    !!  Determine if the iterator is currently set to a valid block.
     !!
     !! RETURN VALUE 
-    !!  True if iterator is currently set to a valid block/tile
+    !!  True if iterator is currently set to a valid block
     !!
     !!****
     function is_valid(this) result(ans)
@@ -182,95 +272,104 @@ contains
     !!  call itor%next()
     !!
     !! DESCRIPTION
-    !!  Advance the iterator to the next block/tile managed by process and
-    !!  that meets the iterator constraints given at instantiation.
-    !!
-    !!****
-    subroutine next(this)
-        use Driver_interface, ONLY : Driver_abortFlash
-
-        class(block_1lev_iterator_t), intent(INOUT) :: this
-
-        if (this%isValid) then
-           this%isValid = this%mfi%next()
-        else
-           call Driver_abortFlash("[block_1lev_iterator]: attempting next() on invalid!")
-        end if
-    end subroutine next
-
-    !!****m* block_1lev_iterator_t/grid_index
-    !!
-    !! NAME
-    !!  grid_index
-    !!
-    !! SYNPOSIS
-    !!  idx = itor%grid_index()
-    !!
-    !! DESCRIPTION
     !!  Advance the iterator to the next block managed by process and that meets
     !!  the iterator constraints given at instantiation.
     !!
     !!****
+    subroutine next(this)
+      use amrex_box_module, ONLY : amrex_box
+        class(block_1lev_iterator_t), intent(INOUT) :: this
+
+        type(amrex_box) :: bx
+        logical :: v, hasChildren
+        
+        if (this%isValid) then
+           do
+!!$           print*,'block_1lev_iterator: about to do next on this=',this%isValid,this%level,associated(this%mfi)
+              v = this%mfi%next()
+!!$           print*,'block_1lev_iterator:       done  next on this=',       v    ,this%level,associated(this%mfi)
+
+              if (.NOT. v) then
+                 call this%destroy_iterator()
+                 exit
+              else
+                 select case (this%nodetype)
+                 case(ALL_BLKS,ACTIVE_BLKS,REFINEMENT)
+                    exit
+                 case(LEAF)
+                    bx = this%mfi%tilebox()
+                    hasChildren = boxIsCovered(bx,this%level-1)
+                    if (.NOT.hasChildren) exit
+                 case(PARENT_BLK)
+                    bx = this%mfi%tilebox()
+                    hasChildren = boxIsCovered(bx,this%level-1)
+                    if (hasChildren) exit
+                 case(ANCESTOR)
+                    ! never found!
+                 case default
+                    ! never match.
+                 end select
+              end if
+           end do
+
+        else
+           print*,'block_1lev_iterator: no next, inValid! on this=',this%isValid,this%level,associated(this%mfi)
+           call Driver_abortFlash("block_1lev_iterator: attempting next() on invalid!")
+        end if
+
+      contains
+        logical function boxIsCovered(bx,lev) result(covered)
+          use amrex_boxarray_module, ONLY : amrex_boxarray
+          use amrex_amrcore_module,  ONLY : amrex_max_level, amrex_ref_ratio, amrex_get_boxarray
+
+          type(amrex_box),intent(INOUT) :: bx !Note: data in bx is changed on return!
+          integer,intent(in) :: lev
+
+          type(amrex_boxarray)   :: fba
+          integer :: rr
+
+          if (lev .GE. amrex_max_level) then
+             covered = .FALSE.
+          else
+             fba = amrex_get_boxarray(lev+1)
+             rr = amrex_ref_ratio(lev)
+             call bx%refine(rr)   !Note: this modifies bx, do not use naively after this!
+             covered = fba%intersects(bx)
+          end if
+          
+        end function boxIsCovered
+    end subroutine next
+
     function grid_index(this) result(idx)
       class(block_1lev_iterator_t), intent(IN) :: this
-      integer                                  :: idx
-
+      integer :: idx
       idx = this%mfi%grid_index()
     end function grid_index
 
-    !!****m* block_1lev_iterator_t/tilebox
-    !!
-    !! NAME
-    !!  tilebox
-    !!
-    !! SYNPOSIS
-    !!  box = itor%tilebox()
-    !!
-    !! DESCRIPTION
-    !!  Obtain the box without guardcells of the block/tile currently
-    !!  "loaded" into the iterator.
-    !!
-    !! RETURN VALUE
-    !!  An AMReX box object.  The index space of the box is the index
-    !!  space of the multifab used to construct the underlying MFIter.
-    !!  The spatial indices of the box use AMReX's 0-based scheme.
-    !!
-    !!****
-    function tilebox(this) result(bx)
+    function tilebox (this) result (bx)
       use amrex_box_module, ONLY : amrex_box
-
       class(block_1lev_iterator_t), intent(in) :: this
-      type(amrex_box)                          :: bx
-
+      type(amrex_box) :: bx
+      integer :: inodal(3)
+      inodal = 0
       bx = this%mfi%tilebox()
     end function tilebox
 
-    !!****m* block_1lev_iterator_t/fabbox
-    !!
-    !! NAME
-    !!  fabbox
-    !!
-    !! SYNPOSIS
-    !!  box = itor%fabbox()
-    !!
-    !! DESCRIPTION
-    !!  Obtain the box wth guardcells of the block/tile currently
-    !!  "loaded" into the iterator.
-    !!
-    !! RETURN VALUE
-    !!  An AMReX box object.  The index space of the box is the index
-    !!  space of the multifab used to construct the underlying MFIter.
-    !!  The spatial indices of the box use AMReX's 0-based scheme.
-    !!
-    !!****
-    function fabbox(this) result(bx)
+    function fabbox (this) result (bx)
       use amrex_box_module, ONLY : amrex_box
-
       class(block_1lev_iterator_t), intent(in) :: this
-      type(amrex_box)                          :: bx
-      
+      type(amrex_box) :: bx
+      integer :: inodal(3)
+      inodal = 0
       bx = this%mfi%fabbox()
     end function fabbox
+
+    function dataPtr (this) result (dp)
+      use amrex_multifab_module, ONLY : amrex_multifab
+      real, contiguous, pointer, dimension(:,:,:,:) :: dp
+      class(block_1lev_iterator_t), intent(in) :: this
+      dp => this%mf%dataPtr(this%mfi)
+    end function dataPtr
 
 end module block_1lev_iterator
 

@@ -3,8 +3,8 @@
 !! NAME
 !!  leaf_iterator
 !!
-!! Ideally, we will be able to use the AMReX iterator directly in the code 
-!! and client code will gain access to it through implementation-specific 
+!! Ideally, we will be able to use the AMReX iterator directly in the code
+!! and client code will gain access to it through implementation-specific
 !! code like Grid_getBlkIterator.
 !!
 !! This is a variant that uses type(block_1lev_iterator_t) as underlying iterator.
