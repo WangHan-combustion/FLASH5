@@ -130,6 +130,8 @@ subroutine Driver_init()
   call RuntimeParameters_get("sweepOrder",sweepOrder)
   call RuntimeParameters_get("dr_shortenLastStepBeforeTMax",dr_shortenLastStepBeforeTMax)
   call RuntimeParameters_get("dr_printTStepLoc", dr_printTStepLoc)
+  call RuntimeParameters_get("dr_advanceAllBlks", dr_advanceAllBlks)
+  call RuntimeParameters_get("dr_trustCoarseEvolution", dr_trustCoarseEvolution)
 
   call RuntimeParameters_get("useDiffuse", dr_useDiffuse)
 

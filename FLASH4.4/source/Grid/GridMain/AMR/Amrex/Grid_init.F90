@@ -498,6 +498,10 @@ subroutine Grid_init()
 !  call RuntimeParameters_get ("reduceGcellFills", gr_reduceGcellFills)
 
 !  gr_region=0.0
+
+  call RuntimeParameters_get("dr_advanceAllBlks", gr_advanceAllBlks)
+  call RuntimeParameters_get("dr_trustCoarseEvolution", gr_trustCoarseEvolution)
+
   
 ! DEVNOTE: What to do with these?
 !#ifndef BSS_GRID_ARRAYS

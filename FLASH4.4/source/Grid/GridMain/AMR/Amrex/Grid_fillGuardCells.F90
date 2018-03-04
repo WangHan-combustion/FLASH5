@@ -153,6 +153,7 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
                                         gr_enableMaskedGCFill, &
                                         gr_meshMe, gr_meshComm, &
                                         gr_gcellsUpToDate, &
+                                        gr_advanceAllBlks, gr_trustCoarseEvolution, &
                                         lo_bc_amrex, hi_bc_amrex
   use Eos_interface,             ONLY : Eos_guardCells
   use Driver_interface,          ONLY : Driver_abortFlash
@@ -352,7 +353,12 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
   end if
 
   ! Restrict data from leaves to coarser blocks
-  call gr_averageDownLevels
+  ! - but if we have advanced the solution on coarse (i.e., non-LEAF)
+  ! blocks and are told to trust that advanc, then skip this restriction
+  ! operation.
+  if (.NOT. (gr_advanceAllBlks .AND. gr_trustCoarseEvolution)) then
+     call gr_averageDownLevels
+  end if
 
   ! Using fill_boundary didn't work on finest levels since the GC outside
   ! the domain were zero (no periodic BC).  AMReX recommended using fillpatch,

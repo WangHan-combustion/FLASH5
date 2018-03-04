@@ -79,6 +79,8 @@ module Driver_data
   real,    save :: dr_dtSTS,dr_dt_subSTS,dr_nuSTS
   integer, save :: dr_nstepTotalSTS
   real,    save :: dr_dtAdvect, dr_dtDiffuse, dr_dtHeatExch
+
+  logical, save :: dr_advanceAllBlks, dr_trustCoarseEvolution
   logical, save :: dr_mpiThreadSupport
   logical, save :: dr_threadBlockList = .false.
   logical, save :: dr_threadWithinBlock = .false.

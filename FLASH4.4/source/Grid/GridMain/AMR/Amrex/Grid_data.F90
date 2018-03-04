@@ -149,4 +149,7 @@ Module Grid_data
 !  logical, save :: gr_reduceGcellFills = .false.
 !
 !  real,allocatable,dimension(:) :: gr_error
+
+  logical, save :: gr_advanceAllBlks, gr_trustCoarseEvolution
+
 end Module Grid_data

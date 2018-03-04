@@ -200,3 +200,15 @@ PARAMETER drift_break_inst INTEGER 0
 
 D drift_tuples should block data be written in python tuples format
 PARAMETER drift_tuples BOOLEAN FALSE
+
+D dr_advanceAllBlks whether cells of all blocks should be advanced by physics operators
+D & even if they are fully covered by blocks of finer resolution.
+D & Some Grid or solver implementations may _require_ advancing on all blocks (or at
+D & least one more than jsut LEAF blocks), and in those cases those requirements
+D & will dominate.
+PARAMETER dr_advanceAllBlks BOOLEAN FALSE
+D dr_trustCoarseEvolution whether we should trust the contents of coarse (i.e., non-LEAF)
+D & cells after physics operators are done with their evolution phases.
+D & It probably only males sense to set this to .TRUE. when dr_advanceAllBlks is
+D & also .TRUE.
+PARAMETER dr_trustCoarseEvolution BOOLEAN FALSE
