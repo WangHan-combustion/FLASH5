@@ -129,22 +129,9 @@ Subroutine hy_upwindTransverseFlux&
 
      !! (1) For hydro/MHD variables:
      !!    (1a) Calculate upwind transverse fluxes for conservative variables
-     do n=1,HY_WAVENUM
-        ! Upwinding
-        ! (NOTE: Using this If-else-endif is much faster than using the signum approach as before)
-        if (lambda(n) > 0.) then
-           TransFlux(hyBeg:hyConEnd) = vc0(hyBeg:hyConEnd)-vm1(hyBeg:hyConEnd)
-        else
-           TransFlux(hyBeg:hyConEnd) = vp1(hyBeg:hyConEnd)-vc0(hyBeg:hyConEnd)
-        endif
-
-        ! Make sigma sums (or the transverse fluxes) for primitive variables 
-        ! except for gamc, game, eint, gravity, and 3T variables.
-        ! gamc, game, eint, grav, and 3T are treated separately in the below, (1b).
-        delbar(n) = dot_product(leig(hyBeg:hyConEnd,n),TransFlux(hyBeg:hyConEnd))
-        TransFlux(hyBeg:hyConEnd) = lambda(n)*reig(hyBeg:hyConEnd,n)*delbar(n)
-        sig(hyBeg:hyConEnd) = sig(hyBeg:hyConEnd) + TransFlux(hyBeg:hyConEnd)
-     enddo ! End of do n=1,HY_WAVENUM
+!! LoopFunction call :: hy_uhd_upwindTransverseFlux_loop(..)
+      call hy_uhd_upwindTransverseFlux_loop (vm1(hyBeg:hyConEnd),vc0(hyBeg:hyConEnd), &
+             vp1(hyBeg:hyConEnd),lambda,leig,reig,sigSize,sig,TransFlux,delbar,hyBeg,hyConEnd)
 
 #ifdef FLASH_UGLM_MHD
 !!$     ! Central differencing for Psi variable for GLM, instead of upwinding

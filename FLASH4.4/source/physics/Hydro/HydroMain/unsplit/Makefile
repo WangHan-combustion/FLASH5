@@ -33,6 +33,7 @@ Hydro += Hydro_data.o\
 	hy_checkRHjumpCond.o\
 	hy_setMinTimeStep.o\
 	hy_upwindTransverseFlux.o\
+	hy_upwindTransverseFlux_loop.o\
 	hy_DataReconstructNormalDir_MH.o\
 	hy_DataReconstructNormalDir_PPM.o\
 	hy_DataReconstructNormalDir_WENO.o\
