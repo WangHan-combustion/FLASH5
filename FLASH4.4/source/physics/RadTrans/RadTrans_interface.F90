@@ -44,7 +44,7 @@ module RadTrans_interface
      end subroutine RadTrans_getDbgContextPtr
   end interface
 
-  interface
+  interface RadTrans
      subroutine RadTrans(nblk, blklst, dt, pass)
        implicit none
        integer, intent(in) :: nblk
@@ -52,7 +52,12 @@ module RadTrans_interface
        real,    intent(in) :: dt
        integer, intent(in), optional :: pass
      end subroutine RadTrans
-  end interface
+     subroutine RadTrans_desc(dt, pass)
+       implicit none
+       real,    intent(in) :: dt
+       integer, intent(in), optional :: pass
+     end subroutine RadTrans_desc
+  end interface RadTrans
 
   interface
      subroutine RadTrans_computeDt(blockID,  blkLimits,blkLimitsGC, &

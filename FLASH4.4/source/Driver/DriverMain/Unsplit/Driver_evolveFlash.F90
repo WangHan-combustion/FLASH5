@@ -220,6 +220,8 @@ subroutine Driver_evolveFlash()
 
      call Burn(dr_dt)
 
+     call RadTrans(dr_dt)
+
      call Grid_copyF4DataToMultiFabs(CENTER, nodetype=LEAF, reverse=.TRUE.)
 #ifdef FLASH_GRID_AMREXTRANSITION
      call gr_amrextBuildMultiFabsFromF4Grid(CENTER, maxLev, ACTIVE_BLKS)

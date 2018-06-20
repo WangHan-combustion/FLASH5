@@ -1,0 +1,61 @@
+##python:genLines
+    
+# Configuration file for Thornado two moment IMEX
+# [physics/RadTarns/RadTransTwoMoment]
+
+import globals
+from globals import *
+
+def genLines(setupvars):
+
+    ##
+    yield 'PPDEFINE THORNADO'
+
+    ##
+    if "nE" in setupvars:
+        nE = int(setupvars["nE"])
+    else:
+        nE = 1
+
+    if "nSpecies" in setupvars:
+        nSpecies = int(setupvars["nSpecies"])
+    else:
+        nSpecies = 1
+
+    if "nNodes" in setupvars:
+        nNodes = int(setupvars["nNodes"])
+    else:
+        nNodes = 2
+
+    if "nMoments" in setupvars:
+        nMoments = int(setupvars["nMoments"])
+    else:
+        nMoments = 4
+
+    nDOFX = nNodes ** (GVars.dimension)
+    nDOF  = nNodes ** (GVars.dimension + 1)
+
+    yield 'PPDEFINE THORNADO_NE         %d' % nE
+    yield 'PPDEFINE THORNADO_NSPECIES   %d' % nSpecies
+    yield 'PPDEFINE THORNADO_NNODES     %d' % nNodes
+    yield 'PPDEFINE THORNADO_NMOMENTS   %d' % nMoments
+    yield 'PPDEFINE THORNADO_FLUID_NDOF %d' % nDOFX
+    yield 'PPDEFINE THORNADO_RAD_NDOF   %d' % nDOF
+
+    nComp = nE * nSpecies * nMoments * nDOF
+    
+    for iS in range(1, nSpecies+1):
+        for iM in range(1, nMoments+1):
+            for iE in range(1, nE+1):
+                for iD in range(1, nDOF+1):
+                    yield 'VARIABLE THORNADO_S%.1dM%.1dE%.2dD%.2d' % (iS, iM, iE, iD)
+
+    yield 'PPDEFINE NTHORNADO %d' % nComp
+    yield 'PPDEFINE THORNADO_BEGIN THORNADO_S1M1E01D01_VAR'
+    yield 'PPDEFINE THORNADO_END THORNADO_S%.1dM%.1dE%.2dD%.2d_VAR' % (nSpecies, nMoments, nE, nDOF)
+
+    ##
+    yield 'REQUIRES physics/Eos'
+
+    ##
+    yield 'MASS_SCALAR YE EOSMAPIN:YE'
