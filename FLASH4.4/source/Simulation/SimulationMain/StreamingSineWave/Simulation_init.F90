@@ -65,7 +65,7 @@ subroutine Simulation_init()
   sim_velz_i = 0.0e0
   sim_pres_i = eosData(EOS_PRES)
   sim_eint_i = eosData(EOS_EINT)
-  sim_etot_i = sim_eint_i + 0.5*(sim_velx_i**2 + sim_vely_i*2 + sim_velz_i**2)
+  sim_etot_i = sim_eint_i + 0.5*(sim_velx_i**2 + sim_vely_i**2 + sim_velz_i**2)
   sim_gamc_i = eosData(EOS_GAMC)
   sim_game_i = sim_pres_i/(sim_eint_i*sim_dens_i) + 1.0e0
 
