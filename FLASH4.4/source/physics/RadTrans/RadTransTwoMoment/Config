@@ -10,6 +10,7 @@ def genLines(setupvars):
 
     ##
     yield 'PPDEFINE THORNADO'
+    yield 'PPDEFINE MOMENT_CLOSURE_MINERBO'
 
     ##
     if "nE" in setupvars:

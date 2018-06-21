@@ -1,5 +1,7 @@
 MODULE TwoMoment_ClosureModule
 
+#include "Flash.h"
+
   USE KindModule, ONLY: &
     DP, SqrtTiny, &
     One, Two, Three, &
