@@ -56,8 +56,7 @@ subroutine RadTrans_desc( dt, pass )
   logical, parameter :: getGuardCells = .true.
   integer :: iSize, jSize, kSize, iSizeGC, jSizeGC, kSizeGC
 
-  integer :: i, j, k, ic, jc, kc, is, im, ie, id
-  integer :: thisBlock
+  integer :: i, j, k, ic, jc, kc, is, im, ie, id, ii
 
   integer :: level, maxLev
   type(leaf_iterator_t) :: itor
