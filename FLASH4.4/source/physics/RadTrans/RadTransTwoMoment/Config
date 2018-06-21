@@ -59,3 +59,6 @@ def genLines(setupvars):
 
     ##
     yield 'MASS_SCALAR YE EOSMAPIN:YE'
+
+    ##
+    yield 'LIBRARY LAPACK'
