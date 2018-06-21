@@ -51,7 +51,7 @@ subroutine Simulation_initBlock(solnData,block)
   real, allocatable, dimension(:) :: xLeft, xCenter, xRight
   real, allocatable, dimension(:) :: yLeft, yCenter, yRight
   real, allocatable, dimension(:) :: zLeft, zCenter, zRight
-  real, dimension(LOW:HIGH) :: delta
+  real, dimension(MDIM) :: delta
   real :: dx, dy, dz
 
   integer, dimension(LOW:HIGH,MDIM) :: blkLimits, blkLimitsGC
