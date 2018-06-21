@@ -51,6 +51,7 @@ subroutine Simulation_initBlock(solnData,block)
   real, allocatable, dimension(:) :: xLeft, xCenter, xRight
   real, allocatable, dimension(:) :: yLeft, yCenter, yRight
   real, allocatable, dimension(:) :: zLeft, zCenter, zRight
+  real, dimension(LOW:HIGH) :: delta
   real :: dx, dy, dz
 
   integer, dimension(LOW:HIGH,MDIM) :: blkLimits, blkLimitsGC
@@ -156,7 +157,7 @@ subroutine Simulation_initBlock(solnData,block)
                  ss = 1.0e0 + 0.9999e0 * sin(2.0e0*PI*xnode)
 
                  ! J moment, im = 1
-                 if (im == 1) solnData(ii,i,j,k) = xx
+                 if (im == 1) solnData(ii,i,j,k) = ss
 
                  ! H_x moment, im = 2
                  if (im == 2) solnData(ii,i,j,k) = 3.0e10 * 0.9999e0 * ss
