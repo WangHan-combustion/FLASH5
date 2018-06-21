@@ -91,7 +91,7 @@ CONTAINS
   ! --- Flux Factor ---
 
 
-  PURE REAL(DP) ELEMENTAL FUNCTION FluxFactor &
+  REAL(DP) PURE ELEMENTAL FUNCTION FluxFactor &
     ( D, I_1, I_2, I_3, Gm_dd_11, Gm_dd_22, Gm_dd_33 )
 
     REAL(DP), INTENT(in) :: D, I_1, I_2, I_3
@@ -112,7 +112,7 @@ CONTAINS
   ! --- Eddington Factor ---
 
 
-  PURE REAL(DP) ELEMENTAL FUNCTION EddingtonFactor( D, FF )
+  REAL(DP) PURE ELEMENTAL FUNCTION EddingtonFactor( D, FF )
 
     REAL(DP), INTENT(in) :: D, FF
 
@@ -156,7 +156,7 @@ CONTAINS
   ! --- Closure Polynomials ---
 
 
-  PURE REAL(DP) ELEMENTAL FUNCTION ClosurePolynomial_ME_CB( X )
+  REAL(DP) PURE ELEMENTAL FUNCTION ClosurePolynomial_ME_CB( X )
 
     ! --- Cernohorsky-Bludman Maximum Entropy Closure ---
 
@@ -168,7 +168,7 @@ CONTAINS
   END FUNCTION ClosurePolynomial_ME_CB
 
 
-  PURE REAL(DP) ELEMENTAL FUNCTION ClosurePolynomial_ME_BL( X )
+  REAL(DP) PURE ELEMENTAL FUNCTION ClosurePolynomial_ME_BL( X )
 
     ! --- Banach-Larecki Maximum Entropy Closure ---
 
@@ -181,7 +181,7 @@ CONTAINS
   END FUNCTION ClosurePolynomial_ME_BL
 
 
-  PURE REAL(DP) ELEMENTAL FUNCTION ClosurePolynomial_KE_BL( X )
+  REAL(DP) PURE ELEMENTAL FUNCTION ClosurePolynomial_KE_BL( X )
 
     ! --- Banach-Larecki Kershaw Closure ---
 
