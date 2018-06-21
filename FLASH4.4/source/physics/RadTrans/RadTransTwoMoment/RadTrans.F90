@@ -122,6 +122,9 @@ subroutine RadTrans_desc( dt, pass )
         xL(1:NDIM) = boundBox(LOW,1:NDIM) * 1.0e-2
         xR(1:NDIM) = boundBox(HIGH,1:NDIM) * 1.0e-2
 
+        ! Get a pointer to solution data
+        call Grid_getBlkPtr(blockDesc, solnData)
+
         call InitThornado_Patch(nX, swX, xL, xR, swE, eL, eR)
 
         ! Copy from the Flash arrays into Thornado arrays from InitThornado_Patch
