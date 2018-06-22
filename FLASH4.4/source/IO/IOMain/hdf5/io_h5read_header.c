@@ -46,8 +46,8 @@ int Driver_abortFlashC(char* message);
  *  file_identifer    the HDF5 file handle (as returned from 
  *                    io_h5open_file_for_read_)
  *
- *  unk_labels        4 letter (5 if you count the null char) string given to 
- *                    unknown variable names
+ *  unk_labels        MAX_STRING_LENGTH letter (MAX_STRING_LENGTH+1 if you count
+ *                    the null char) string given to unknown variable names
  *
  *  outputSplitNum    not implemented fully right now.  Needs more development.
  *                    Intended to allow users to split checkpoint file into x parts.
@@ -56,7 +56,7 @@ int Driver_abortFlashC(char* message);
 
 void FTOC(io_h5read_header)(int* MyPE,
                       hid_t* file_identifier,    /* file handle */
-                      char unk_labels[][5],
+                      char unk_labels[][MAX_STRING_LENGTH+1],
                       int* outputSplitNum)      /*unknown labels */
 
 

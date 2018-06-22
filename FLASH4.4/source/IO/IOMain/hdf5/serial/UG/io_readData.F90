@@ -77,7 +77,7 @@ subroutine io_readData()
 
   integer :: status(MPI_STATUS_SIZE)
       
-  character(len=4) :: recordLabel
+  character(len=MAX_STRING_LENGTH) :: recordLabel
 
   real, allocatable :: unkBuf(:,:,:,:,:)
   real, allocatable :: faceXBuf(:,:,:,:,:)

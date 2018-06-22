@@ -38,7 +38,7 @@ int Driver_abortFlashC(char* message);
  *                     int* nvar_out,
  *                     hid_t* file_identifier,
  *                     char geometry_name[],    
- *                     char unk_labels[][4],  
+ *                     char unk_labels[][MAX_STRING_LENGTH],  
  *                     char setup_call[],  
  *                     char file_creation_time[],
  *                     char flash_version[],     
@@ -68,7 +68,7 @@ int Driver_abortFlashC(char* message);
  *
  *  file_identifier       the file handle as return by the HDF5 library
  *
- *  unk_labels            the 4-character descriptive name for each of the 
+ *  unk_labels            the MAX_STRING_LENGTH-character descriptive name for each of the 
  *                        solution variables we are storing.
  *
  *  setup_call            a string giving the syntax of the setup command used
@@ -106,7 +106,7 @@ void FTOC(io_h5write_header)(int* MyPE,
                        int* nvar_out,             /* num vars to store */
                        hid_t* file_identifier,    /* file handle */
                        char geometry_name[],    
-                       char unk_labels[][4],      /* unknown labels */
+                       char unk_labels[][MAX_STRING_LENGTH],      /* unknown labels */
                        char setup_call[],   /* syntax of setup */
                        char file_creation_time[], /* time and date stamp */
                        char flash_version[],      /* FLASH version num */
@@ -293,7 +293,7 @@ void FTOC(io_h5write_header)(int* MyPE,
     /* first we have to lowercase all of the names so that these are 
        consistent with the unkNames.*/
     for (i = 0; i < *nvar_out; ++i){
-      for (j=0; j<4; ++j){
+      for (j=0; j<MAX_STRING_LENGTH; ++j){
 	if( unk_labels[i][j] >= 'A' && unk_labels[i][j] <= 'Z')
 	  unk_labels[i][j] += 32;
       }
@@ -305,7 +305,7 @@ void FTOC(io_h5write_header)(int* MyPE,
     
     
     /* manually set the string size */
-    string_size = 4;
+    string_size = MAX_STRING_LENGTH;
     
     /* setup the datatype for this string length */
     string_type = H5Tcopy(H5T_C_S1);
