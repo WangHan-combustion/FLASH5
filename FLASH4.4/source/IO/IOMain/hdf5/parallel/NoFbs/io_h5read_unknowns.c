@@ -30,7 +30,7 @@ void FTOC(io_h5read_unknowns)(
     int *nyb,  /*num of zones in y to be read*/
     int *nzb,  /*num of zones in z to be read*/
     double* unknowns,     /* [mblk][NZB][NYB][NXB][var] */
-    char record_label[5], /* add char--null termination */
+    char record_label[MAX_STRING_LENGTH+1], /* add char--null termination */
     int *doread)
 {
   hid_t dataspace, dataset, memspace;
@@ -42,16 +42,16 @@ void FTOC(io_h5read_unknowns)(
   hsize_t start_4d[4], start_5d[5];
   hsize_t stride_4d[4], stride_5d[5], count_4d[4], count_5d[5];
 
-  char record_label_new[5];
+  char record_label_new[MAX_STRING_LENGTH+1];
 
   int ierr;
   int total_blocks = 1; /* doesn't mean all that much for nofbs */
 
-  /* the variable names are 4 characters long -- copy this into 
-     record_label_new, the 5th character is for the \0 termination */
-  strncpy(record_label_new, record_label,4);
+  /* the variable names are MAX_STRING_LENGTH characters long -- copy this into 
+     record_label_new, the (MAX_STRING_LENGTH+1) character is for the \0 termination */
+  strncpy(record_label_new, record_label,MAX_STRING_LENGTH);
 
-  *(record_label_new + 4) = '\0';
+  *(record_label_new + MAX_STRING_LENGTH) = '\0';
 
 
   /* open the dataset */

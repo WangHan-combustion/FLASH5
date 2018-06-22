@@ -43,7 +43,7 @@ void FTOC(io_h5write_facevars)(int* myPE,
                                double* unknowns,     /* [1][NZB][NYB][NXB] */
 			       double* varMin,       /* minimum value of unknown */
 			       double* varMax,       /* maximum value of unknown */
-                               char record_label[5]) /* add char-null termination */
+                               char record_label[MAX_STRING_LENGTH+1]) /* add char-null termination */
 {
 
   hid_t dataspace, dataset, memspace, dxfer_template, dataset_plist;
@@ -60,7 +60,7 @@ void FTOC(io_h5write_facevars)(int* myPE,
   hsize_t dimens_chunk[4];
 #endif
 
-  char record_label_new[5];
+  char record_label_new[MAX_STRING_LENGTH+1];
 
   int total_blocks = 1; /* not necessary for nofbs, but keeps consistency for fidlr routines */
 
@@ -87,11 +87,11 @@ void FTOC(io_h5write_facevars)(int* myPE,
     *nzbOffset++;
   */
   /* 
-     the variable names are 4 characters long -- copy this into 
-     record_label_new, the 5th character is for the \0 termination 
+     the variable names are MAX_STRING_LENGTH characters long -- copy this into 
+     record_label_new, the (MAX_STRING_LENGTH+1) character is for the \0 termination 
   */
-  strncpy(record_label_new, record_label,4);
-  *(record_label_new + 4) = '\0';
+  strncpy(record_label_new, record_label,MAX_STRING_LENGTH);
+  *(record_label_new + MAX_STRING_LENGTH) = '\0';
 
   /* set the dimensions of the dataset */
   rank = 4;

@@ -141,16 +141,16 @@ module IO_data
   integer, save :: io_unkNonRep(UNK_VARS_BEGIN:UNK_VARS_END) ! the nonrep array each unk belongs to, or 0 if not in a nonrep
   integer, save :: io_unkNonRepIdx(UNK_VARS_BEGIN:UNK_VARS_END) ! the index of this unk in its nonrep array, or 0 if not in a nonrep
   
-  ! create a temporary array to hold the 4 character variable names
-  character (len=4), save :: io_unklabels(UNK_VARS_BEGIN:UNK_VARS_END) ! the global name of each unk.  corresponds witih the indices of unk.  since a nonrep array wont necessarily use all unks in each process, some of these entries may be "err"
-  character (len=4), allocatable, save :: io_unklabelsGlobal(:) ! list of global unks, in no particular order.  this will be the same on all processes.
-  character (len=4), save :: io_scratchGridVarlabels(SCRATCH_GRID_VARS_BEGIN:SCRATCH_GRID_VARS_END)
-  character (len=4), save :: io_faceXVarLabels(NFACE_VARS)
-  character (len=4), save :: io_faceYVarLabels(NFACE_VARS)
-  character (len=4), save :: io_faceZVarLabels(NFACE_VARS)
-  character (len=4), save :: io_plotVarStr(io_maxPlotVars)
-  character (len=4), save :: io_plotGridVarStr(io_maxPlotGridVars)
-  character (len=4), save :: io_plotFaceVarStr(io_maxPlotFaceVars) ! NOT YET IMPLEMENTED
+  ! create a temporary array to hold the character variable names
+  character (len=MAX_STRING_LENGTH), save :: io_unklabels(UNK_VARS_BEGIN:UNK_VARS_END) ! the global name of each unk.  corresponds witih the indices of unk.  since a nonrep array wont necessarily use all unks in each process, some of these entries may be "err"
+  character (len=MAX_STRING_LENGTH), allocatable, save :: io_unklabelsGlobal(:) ! list of global unks, in no particular order.  this will be the same on all processes.
+  character (len=MAX_STRING_LENGTH), save :: io_scratchGridVarlabels(SCRATCH_GRID_VARS_BEGIN:SCRATCH_GRID_VARS_END)
+  character (len=MAX_STRING_LENGTH), save :: io_faceXVarLabels(NFACE_VARS)
+  character (len=MAX_STRING_LENGTH), save :: io_faceYVarLabels(NFACE_VARS)
+  character (len=MAX_STRING_LENGTH), save :: io_faceZVarLabels(NFACE_VARS)
+  character (len=MAX_STRING_LENGTH), save :: io_plotVarStr(io_maxPlotVars)
+  character (len=MAX_STRING_LENGTH), save :: io_plotGridVarStr(io_maxPlotGridVars)
+  character (len=MAX_STRING_LENGTH), save :: io_plotFaceVarStr(io_maxPlotFaceVars) ! NOT YET IMPLEMENTED
 
 
   logical, save :: io_chkGuardCellsInput, io_chkGuardCellsOutput !currently only implemented in hdf5 parallel for paramesh

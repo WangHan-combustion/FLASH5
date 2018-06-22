@@ -113,7 +113,7 @@ subroutine io_readData()
   
   integer :: status(MPI_STATUS_SIZE)
       
-  character(len=4) :: recordLabel
+  character(len=MAX_STRING_LENGTH) :: recordLabel
 
   ! for logfile output
   character(len=MAX_STRING_LENGTH), save, allocatable, dimension(:,:) :: strBuf

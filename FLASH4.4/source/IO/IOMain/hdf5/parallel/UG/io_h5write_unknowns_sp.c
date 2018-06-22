@@ -41,7 +41,7 @@ void FTOC(io_h5write_unknowns_sp)(int* myPE,
                           float* varMin,
                           float* varMax,
                           float* unknowns,   /* [mblk][NZB][NYB][NXB][nvar] */
-                          char record_label[5],/* add char-null termination */
+                          char record_label[MAX_STRING_LENGTH+1],/* add char-null termination */
                           int* local_blocks,  
                           int* total_blocks,
                           int* global_offset,
@@ -67,7 +67,7 @@ void FTOC(io_h5write_unknowns_sp)(int* myPE,
   hsize_t dimens_chunk[4];
 #endif
 
-  char record_label_new[5];
+  char record_label_new[MAX_STRING_LENGTH+1];
   const char minLabel[] = "minimum";
   const char maxLabel[] = "maximum";
   const int attType = IO_FLASH_FLOAT;
@@ -84,11 +84,11 @@ void FTOC(io_h5write_unknowns_sp)(int* myPE,
 
 
   /* 
-     the variable names are 4 characters long -- copy this into 
-     record_label_new, the 5th character is for the \0 termination 
+     the variable names are MAX_STRING_LENGTH characters long -- copy this into 
+     record_label_new, the (MAX_STRING_LENGTH+1) character is for the \0 termination 
   */
-  strncpy(record_label_new, record_label,4);
-  *(record_label_new + 4) = '\0';
+  strncpy(record_label_new, record_label,MAX_STRING_LENGTH);
+  *(record_label_new + MAX_STRING_LENGTH) = '\0';
 
   /* set the dimensions of the dataset */
   rank = 4;
