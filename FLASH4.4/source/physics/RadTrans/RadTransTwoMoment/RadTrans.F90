@@ -89,7 +89,7 @@ subroutine RadTrans_desc( dt, pass )
   swX(1:3) = my_ngrow
   swE = 0
   eL = 0.0
-  eR = 0.0
+  eR = 1.0
 
 #ifdef FLASH_GRID_UG
   maxLev = 1
