@@ -34,7 +34,8 @@ subroutine Simulation_initBlock(solnData,block)
   use Driver_interface, ONLY : Driver_abortFlash
   use Grid_interface, ONLY : Grid_getCellCoords
   use ProgramHeaderModule, ONLY : nE, nDOF, nNodesX, nNodesE
-  use RadiationFieldsModule, ONLY : nSpecies, nCR
+  use RadiationFieldsModule, ONLY : nSpecies, nCR, iCR_N, iCR_G1, iCR_G2, iCR_G3
+  use UnitsModule, ONLY : Centimeter, Gram, Second
 
   use block_metadata, ONLY : block_metadata_t
 
@@ -65,6 +66,10 @@ subroutine Simulation_initBlock(solnData,block)
   integer :: is, im, ie, ixnode, iynode, iznode, ienode, ii_0, id, ii
   integer :: nx, ny, nz
   real :: xnode, ynode, znode, ss
+
+  real, parameter :: conv_x = Centimeter
+  real, parameter :: conv_J = Gram/Second**2/Centimeter
+  real, parameter :: conv_H = Gram/Second**3
 
   blkLimits = block%limits
   blkLimitsGC = block%limitsGC
@@ -154,19 +159,19 @@ subroutine Simulation_initBlock(solnData,block)
                  ynode = yCenter(j) + (real(iynode)-1.5)*dy/sqrt(3.0)
                  znode = zCenter(k) + (real(iznode)-1.5)*dz/sqrt(3.0)
 
-                 ss = 1.0e0 + 0.9999e0 * sin(2.0e0*PI*xnode)
+                 ss = 1.0e0 + sin(2.0e0*PI*xnode * conv_x)
 
                  ! J moment, im = 1
-                 if (im == 1) solnData(ii,i,j,k) = ss
+                 if (im == iCR_N) solnData(ii,i,j,k) = ss! / conv_J
 
                  ! H_x moment, im = 2
-                 if (im == 2) solnData(ii,i,j,k) = 3.0e10 * 0.9999e0 * ss
+                 if (im == iCR_G1) solnData(ii,i,j,k) = ss! / conv_H
 
                  ! H_y moment, im = 3
-                 if (im == 3) solnData(ii,i,j,k) = 0.0e0
+                 if (im == iCR_G2) solnData(ii,i,j,k) = 0.0e0
 
                  ! H_z moment, im = 4
-                 if (im == 4) solnData(ii,i,j,k) = 0.0e0
+                 if (im == iCR_G3) solnData(ii,i,j,k) = 0.0e0
 
               enddo ; enddo ; enddo ; enddo
            enddo ; enddo ; enddo

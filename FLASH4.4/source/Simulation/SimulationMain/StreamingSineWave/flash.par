@@ -10,7 +10,7 @@ restart = .false.
 checkpointFileNumber = 0
 plotFileNumber = 0
 
-checkpointFileIntervalStep = 200
+checkpointFileIntervalStep = 30 # 1/6 period
 #checkpointFileIntervalTime = 0.0
 
 plotFileIntervalStep = 200
@@ -20,14 +20,15 @@ ignoreForcedPlot = .false.
 
 #eachProcWritesSummary = .true.
 #writeStateSummary = .true.
+#summaryOutputOnly = .true.
 
 plot_var_1 = "dens"
 plot_var_2 = "pres"
 plot_var_3 = "temp"
 
 # go for nend steps or tmax seconds, whichever comes first
-nend = 1
-tmax = 10.0
+nend = 10000
+tmax = 3.33564095198152e-8 # 10 periods ((xmax-xmin)/clight)
 
 #
 # mesh definition
@@ -36,11 +37,11 @@ tmax = 10.0
 # physical domain
 geometry = "cartesian"
 xmin = 0.0
-xmax = 1.0
+xmax = 100.0
 ymin = 0.0
-ymax = 1.0
+ymax = 100.0
 zmin = 0.0
-zmax = 1.0
+zmax = 100.0
 
 # boundary conditions
 xl_boundary_type = "periodic"
@@ -62,11 +63,13 @@ refine_var_1 = "dens"
 refine_var_2 = "pres"
 
 # timestep
-dtinit = 1.0e0
-dtmin = 5.0e-20
-tstep_change_factor = 1.1e0
+# manually set this to be 0.2 * (1/3 * min(dx) / clight)
+dtinit = 1.38985039665897e-11
+dtmax = 1.38985039665897e-11
+dtmin = 1.38985039665897e-11
+tstep_change_factor = 1.0e0
 dr_dtMinContinue = 5.0e-20
-dr_tstepSlowStartFactor = 0.1e0
+dr_tstepSlowStartFactor = 1.0e0
 dr_shortenLastStepBeforeTMax = .true.
 cfl = 0.8
 

@@ -31,7 +31,7 @@ subroutine RadTrans_desc( dt, pass )
      Grid_releaseBlkPtr, Grid_getMaxRefinement, Grid_getLeafIterator, &
      Grid_releaseLeafIterator, Grid_getBlkBoundBox
   use ProgramHeaderModule, ONLY : nE, nDOF, nDOFX
-  use RadiationFieldsModule, ONLY : nSpecies, uCR, nCR
+  use RadiationFieldsModule, ONLY : nSpecies, uCR, nCR, iCR_N, iCR_G1, iCR_G2, iCR_G3
   use RadTrans_data, ONLY : rt_useRadTrans
   use ThornadoInitializationModule, ONLY : InitThornado_Patch, FreeThornado_Patch
   use Timers_interface, ONLY : Timers_start, Timers_stop
@@ -71,6 +71,7 @@ subroutine RadTrans_desc( dt, pass )
   ! Old and new radiation state
   real, allocatable, dimension(:,:,:,:) :: U_R_o, U_R_n
 
+  real, parameter :: conv_x    = Centimeter
   real, parameter :: conv_dens = Gram / Centimeter**3
   real, parameter :: conv_mom  = Gram / Centimeter**2 / Second
   real, parameter :: conv_enr  = Gram / Centimeter / Second**2
@@ -119,8 +120,8 @@ subroutine RadTrans_desc( dt, pass )
         call Grid_getBlkBoundBox(blockDesc, boundBox)
 
         ! Convert cm to m for Thornado
-        xL(1:NDIM) = boundBox(LOW,1:NDIM) * 1.0e-2
-        xR(1:NDIM) = boundBox(HIGH,1:NDIM) * 1.0e-2
+        xL(1:NDIM) = boundBox(LOW,1:NDIM) * conv_x
+        xR(1:NDIM) = boundBox(HIGH,1:NDIM) * conv_x
 
         ! Get a pointer to solution data
         call Grid_getBlkPtr(blockDesc, solnData)
@@ -149,10 +150,10 @@ subroutine RadTrans_desc( dt, pass )
                  do is = 1, nSpecies ; do im = 1, nCR ; do ie = 1, nE ; do id = 1, nDOF
                     ii = THORNADO_BEGIN + (is-1)*(nCR*nE*nDOF) + (im-1)*(nE*nDOF) + (ie-1)*nDOF + (id-1)
 
-                    if ( im == 1 ) then
-                       uCR(id,ie,i,j,k,im,is) = solnData(ii,ic,jc,kc) * conv_J
-                    else if ( im > 1 ) then
-                       uCR(id,ie,i,j,k,im,is) = solnData(ii,ic,jc,kc) * conv_H
+                    if ( im == iCR_N ) then
+                       uCR(id,ie,i,j,k,im,is) = solnData(ii,ic,jc,kc)! * conv_J
+                    else
+                       uCR(id,ie,i,j,k,im,is) = solnData(ii,ic,jc,kc)!* conv_H
                     end if
 
                  end do ; end do ; end do ; end do
@@ -185,10 +186,10 @@ subroutine RadTrans_desc( dt, pass )
                  do is = 1, nSpecies ; do im = 1, nCR ; do ie = 1, nE ; do id = 1, nDOF
                     ii = THORNADO_BEGIN + (is-1)*(nCR*nE*nDOF) + (im-1)*(nE*nDOF) + (ie-1)*nDOF + (id-1)
 
-                    if ( im == 1 ) then
-                       solnData(ii,ic,jc,kc) = uCR(id,ie,i,j,k,im,is) / conv_J
-                    else if ( im > 1 ) then
-                       solnData(ii,ic,jc,kc) = uCR(id,ie,i,j,k,im,is) / conv_H
+                    if ( im == iCR_N ) then
+                       solnData(ii,ic,jc,kc) = uCR(id,ie,i,j,k,im,is)! / conv_J
+                    else
+                       solnData(ii,ic,jc,kc) = uCR(id,ie,i,j,k,im,is)! / conv_H
                     end if
 
                  end do ; end do ; end do ; end do
