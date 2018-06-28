@@ -15,6 +15,7 @@ REQUIRES Multispecies
 #REQUIRES physics/sourceTerms/Burn/BurnMain/nuclearBurn/XNet150_CPU_loadBalance_batched
 #REQUIRES physics/sourceTerms/Burn/BurnMain/nuclearBurn/Aprox13
 #REQUIRES physics/sourceTerms/Burn/BurnMain/nuclearBurn/Aprox19
+REQUIRES physics/sourceTerms/Burn/BurnMain/nuclearBurn/XNet
 
 #REQUIRES physics/Eos/EosMain
 REQUIRES physics/Eos/EosMain/Helmholtz
