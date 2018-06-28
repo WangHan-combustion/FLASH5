@@ -5,6 +5,7 @@
 SPACK_GCC=/home/sauc/Softwares/spack/opt/spack/linux-ubuntu16.04-x86_64/gcc-6.4.0
 
 HDF5_PATH = ${SPACK_GCC}/hdf5-1.8.19-o37nepbsolbgwzs2qrqdfglr3tmhai2c
+HDF5_PATH = ${SPACK_GCC}/hdf5-1.8.19-c2kcsgeupc2fsnnmtova2y7boxwf77ym
 #HDF5_PATH = /home/sauc/Softwares/spack/opt/spack/linux-ubuntu16.04-x86_64/gcc-5.4.0/hdf5-1.8.19-tgq3sf66sw3agicwotbrgpvgtrfgdoie
 #AMREX_PATH = /home/sauc/Softwares/spack/opt/spack/linux-ubuntu16.04-x86_64/gcc-5.4.0/amrex-master-6jw7hbzurjx3w7zq7yxdiulpn5w4czer
 #AMREX_PATH = ${SPACK_GCC}/amrex-master-xavsjpdiznbgzuessdvwbb2yk4yorzdx
@@ -15,6 +16,8 @@ ZLIB_PATH  =
 
 PAPI_PATH  =
 PAPI_FLAGS =
+
+LIB_LAPACK =${SPACK_GCC}/openblas-0.2.20-3fdwz5zyh5vkcdr7q7h75xs7j6x5vde7/lib
 
 LIB_NCMPI = /usr/local
 MPE_PATH   =
@@ -136,6 +139,7 @@ LIB_STDCXX = -L/usr/include/c++/5 -lstdc++
 # Need the following environmental variable (see env.sh):
 # export EF_ALLOW_MALLOC_0=1
 #CONFIG_LIB = -L/usr/lib64 -lefence
+CONFIG_LIB = $(HDF5_PATH)/lib/libhdf5_fortran.a
 
 #----------------------------------------------------------------------------
 # Additional machine-dependent object files
