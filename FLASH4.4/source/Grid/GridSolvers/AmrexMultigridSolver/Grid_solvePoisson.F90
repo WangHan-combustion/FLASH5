@@ -48,6 +48,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
   use Grid_interface,   ONLY : GRID_PDE_BND_PERIODIC,  &
        GRID_PDE_BND_NEUMANN,   &
        GRID_PDE_BND_DIRICHLET
+  use Grid_data,  ONLY : gr_meshMe
   use amrex_multigrid_module, ONLY : amrex_multigrid, amrex_multigrid_build, amrex_multigrid_destroy
   use amrex_poisson_module, ONLY : amrex_poisson, amrex_poisson_build, amrex_poisson_destroy
   use amrex_lo_bctypes_module, ONLY : amrex_lo_periodic, amrex_lo_dirichlet, amrex_lo_neumann
@@ -118,7 +119,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
        case (GRID_PDE_BND_DIRICHLET)
           amrexPoissonBcTypes(i)=amrex_lo_dirichlet
        case default
-          call Driver_abortFlash('Only periodic BC implemented for AMReX poisson solver!')
+          call Driver_abortFlash('Invalid or unsupported boundary condition for AMReX multigrid solver!')
        end select
      end do
      call poisson % set_domain_bc([amrexPoissonBcTypes(1),amrexPoissonBcTypes(3),amrexPoissonBcTypes(5)], &
@@ -135,9 +136,9 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
        call multigrid % set_max_iter(gr_amrexLs_max_iter)
        call multigrid % set_max_fmg_iter(gr_amrexLs_max_fmg_iter)
 
-       print*, "Calling multigrid solve, maxlev", maxLevel
+       if(gr_meshMe .EQ. MASTER_PE) print*, "Calling multigrid solve, maxlev", maxLevel
        err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
-        print*, err
+       if(gr_meshMe .EQ. MASTER_PE) print*,"Multigrid Error := ", err
        call amrex_multigrid_destroy(multigrid)
        call amrex_poisson_destroy(poisson)
   else
@@ -155,7 +156,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
        case (GRID_PDE_BND_DIRICHLET)
           amrexPoissonBcTypes(i)=amrex_lo_dirichlet
        case default
-          call Driver_abortFlash('Only periodic BC implemented for AMReX poissonsolver!')
+          call Driver_abortFlash('Invalid or unsupported boundary condition for AMReX multigrid solver!')
        end select
        end do
        call poisson %set_domain_bc([amrexPoissonBcTypes(1),amrexPoissonBcTypes(3),amrexPoissonBcTypes(5)],&
@@ -179,9 +180,9 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
        call multigrid % set_max_iter(gr_amrexLs_max_iter)
        call multigrid % set_max_fmg_iter(gr_amrexLs_max_fmg_iter)
 
+       if(gr_meshMe .EQ. MASTER_PE) print*, "Calling multigrid solve at level ", ilev
        err = multigrid % solve([solution(ilev)], [rhs(ilev)],1.e-10_amrex_real, 0.0_amrex_real)
-       !err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
-       print*, err
+       if(gr_meshMe .EQ. MASTER_PE) print*,"Multigrid Error := ", err
        call amrex_poisson_destroy(poisson)
        call amrex_multigrid_destroy(multigrid)
     end do
