@@ -9,7 +9,7 @@ HDF5_PATH = ${SPACK_GCC}/hdf5-1.8.19-c2kcsgeupc2fsnnmtova2y7boxwf77ym
 #HDF5_PATH = /home/sauc/Softwares/spack/opt/spack/linux-ubuntu16.04-x86_64/gcc-5.4.0/hdf5-1.8.19-tgq3sf66sw3agicwotbrgpvgtrfgdoie
 #AMREX_PATH = /home/sauc/Softwares/spack/opt/spack/linux-ubuntu16.04-x86_64/gcc-5.4.0/amrex-master-6jw7hbzurjx3w7zq7yxdiulpn5w4czer
 #AMREX_PATH = ${SPACK_GCC}/amrex-master-xavsjpdiznbgzuessdvwbb2yk4yorzdx
-AMREX_PATH = /home/sauc/Softwares/amrex/build-3d
+AMREX_PATH = /home/sauc/Softwares/amrex/build-2d
 HYPRE_PATH = ${SPACK_GCC}/hypre-2.10.0b-q7c6jt2acstfmxviujmeh57gxgxltvzs
 #HYPRE_PATH = /home/sauc/Softwares/spack/opt/spack/linux-ubuntu16.04-x86_64/gcc-5.4.0/hypre-2.10.0b-7pe44q2taksk77wdoksdmbenoxtd3fyl
 ZLIB_PATH  =
@@ -17,7 +17,7 @@ ZLIB_PATH  =
 PAPI_PATH  =
 PAPI_FLAGS =
 
-LIB_LAPACK =${SPACK_GCC}/openblas-0.2.20-3fdwz5zyh5vkcdr7q7h75xs7j6x5vde7/lib
+LIB_LAPACK =${SPACK_GCC}/openblas-0.2.20-3fdwz5zyh5vkcdr7q7h75xs7j6x5vde7/lib/libopenblas.a
 
 LIB_NCMPI = /usr/local
 MPE_PATH   =
@@ -58,7 +58,8 @@ FFLAGS_DEBUG = -ggdb -c -O0 -fdefault-real-8 -fdefault-double-8 \
 -pedantic -Wall -Wextra -Waliasing \
 -Wsurprising -Wconversion -Wunderflow \
 -ffpe-trap=invalid,zero,overflow -fbounds-check \
--fimplicit-none -fstack-protector-all \
+-fstack-protector-all \
+#-fimplicit-none -fstack-protector-all \
 -fbacktrace -fbounds-check
 
 FFLAGS_TEST = -ggdb -c -fdefault-real-8 -fdefault-double-8 \
