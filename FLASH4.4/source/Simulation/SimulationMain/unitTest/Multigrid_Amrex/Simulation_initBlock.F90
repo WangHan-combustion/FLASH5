@@ -57,13 +57,14 @@ subroutine Simulation_initBlock(solnData,block)
   real,allocatable, dimension(:) ::xCenter,yCenter,zCenter
   integer :: sizeX,sizeY,sizeZ
 
-  real :: Lx, Ly, Lz, xi, yi, zi, Phi_ijk, F_ijk
+  real :: Lx, Ly, Lz, xi, yi, zi, Phi_ijk, F_ijk, A, B, eB
 
 
   real, parameter :: pfb_waven_x = 2.
   real, parameter :: pfb_waven_y = 1.
   real, parameter :: pfb_waven_z = 2.
   real, parameter :: pfb_alpha_x = 0.
+  real, parameter :: twoSigma = 0.04
 
   logical :: gcell = .true.
 
@@ -105,12 +106,19 @@ subroutine Simulation_initBlock(solnData,block)
           yi=yCenter(j)
           zi=zCenter(k)
 
-           Phi_ijk = cos(2.*PI*xi*pfb_waven_x/Lx + pfb_alpha_x) * &
-                     sin(2.*PI*yi*pfb_waven_y/Ly)*cos(2.*PI*zi*pfb_waven_z/Lz)
+!           Phi_ijk = sin(2.*PI*xi*pfb_waven_x/Lx + pfb_alpha_x) * &
+!                     sin(2.*PI*yi*pfb_waven_y/Ly)*cos(2.*PI*zi*pfb_waven_z/Lz)
+!
+!  
+!           F_ijk  = -4.*PI**2 * ( (pfb_waven_x/Lx)**2. + (pfb_waven_y/Ly)**2. + (pfb_waven_z/Lz)**2. ) * Phi_ijk
 
-  
-           F_ijk  = -4.*PI**2 * ( (pfb_waven_x/Lx)**2. + (pfb_waven_y/Ly)**2. + (pfb_waven_z/Lz)**2. ) * Phi_ijk
-           
+           A = sin(5.*PI*xi)*sin(5.*PI*yi)
+           B = 25.*xi*xi + 25.*yi*yi
+           eB = exp(-B)
+           Phi_ijk = A*exp((-xi*xi-yi*yi)/twoSigma)
+F_ijk=-100.*A*eB + 2500.*A*eB*(xi*xi+yi*yi) - 50.*PI*PI*A*eB
+           F_ijk=F_ijk-500*PI*A*eB*xi*cos(5.*PI*xi)*sin(5.*PI*xi)
+           F_ijk=F_ijk-500*PI*A*eB*yi*sin(5.*PI*yi)*cos(5.*PI*yi)
            solnData(i,j,k,ASOL_VAR) = Phi_ijk
 
            solnData(i,j,k,RHS_VAR) = F_ijk
