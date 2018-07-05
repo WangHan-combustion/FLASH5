@@ -81,6 +81,7 @@ use amrex_amr_module,     ONLY : amrex_init_from_scratch, &
   ! -------------------------------------------------------------------
   bcTypes(:)=GRID_PDE_BND_NEUMANN  
   bcTypes(3:4)=GRID_PDE_BND_DIRICHLET
+  bcTypes(:)=GRID_PDE_BND_PERIODIC 
   bcValues(:,:)=0.
 
   call mpi_barrier(gr_meshComm,ierr)
