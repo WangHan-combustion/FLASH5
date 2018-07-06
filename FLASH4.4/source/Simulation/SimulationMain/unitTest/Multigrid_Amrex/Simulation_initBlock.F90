@@ -113,6 +113,7 @@ subroutine Simulation_initBlock(solnData,block)
 !  
 !           F_ijk  = -4.*PI**2 * ( (pfb_waven_x/Lx)**2. + (pfb_waven_y/Ly)**2. + (pfb_waven_z/Lz)**2. ) * Phi_ijk
 
+           xi=xi*2/Lx ; yi=yi*2/Ly ; zi = zi*2/Lz
            A = sin(fp*xi)*sin(fp*yi)*sin(fp*zi)
            B = 25.*xi*xi + 25.*yi*yi + 25.*zi*zi
            eB = exp(-B)
@@ -125,6 +126,8 @@ F_ijk=F_ijk-500*PI*zi*eB*sin(fp*xi)*sin(fp*yi)*cos(fp*zi)
            solnData(i,j,k,ASOL_VAR) = Phi_ijk
 
            solnData(i,j,k,RHS_VAR) = F_ijk
+
+           solnData(i,j,k,DENS_VAR) = sqrt(B/25) !radius. TBU in refinement
 
         enddo
      enddo
