@@ -64,7 +64,7 @@ subroutine Simulation_initBlock(solnData,block)
   real, parameter :: pfb_waven_y = 1.
   real, parameter :: pfb_waven_z = 2.
   real, parameter :: pfb_alpha_x = 0.
-  real, parameter :: twoSigma = 0.04
+  real :: twoSigma2 = 0.04
 
   logical :: gcell = .true.
 
@@ -113,11 +113,11 @@ subroutine Simulation_initBlock(solnData,block)
 !  
 !           F_ijk  = -4.*PI**2 * ( (pfb_waven_x/Lx)**2. + (pfb_waven_y/Ly)**2. + (pfb_waven_z/Lz)**2. ) * Phi_ijk
 
-           xi=xi*2/Lx ; yi=yi*2/Ly ; zi = zi*2/Lz
+           xi=xi*2/Lx; yi=yi*2/Ly; zi = zi*2/Lz; twosigma2=twosigma2/(Lx*Ly/4.0)
            A = sin(fp*xi)*sin(fp*yi)*sin(fp*zi)
            B = 25.*xi*xi + 25.*yi*yi + 25.*zi*zi
            eB = exp(-B)
-          Phi_ijk = A*exp((-xi*xi-yi*yi-zi*zi)/twoSigma)
+          Phi_ijk = A*exp((-xi*xi-yi*yi-zi*zi)/twoSigma2)
            F_ijk=(-3*fp**2-150+100*B)*A*eB
 F_ijk=F_ijk-500*PI*xi*eB*cos(fp*xi)*sin(fp*yi)*sin(fp*zi)
 F_ijk=F_ijk-500*PI*yi*eB*sin(fp*xi)*cos(fp*yi)*sin(fp*zi)
