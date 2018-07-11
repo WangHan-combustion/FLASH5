@@ -1,4 +1,4 @@
-!!****if* source/Grid/GridSolvers/AmrexMultigridSolver/Grid_solvePoisson
+!!****if* source/Grid/GridSolvers/AmrexMultigridSolver/gr_amrexLsFixedPoisson
 !!
 !!  NAME 
 !!
@@ -30,13 +30,7 @@
 !!
 !!  bcValues - the values to boundary conditions, currently not used (treated as 0)
 !!  poisfact      - scaling factor to be used in calculation
-!!  iAlpha   - index for alpha matrix in ABECLaplacian equation (cell centered)
-!!  iBeta    - index for beta matrix (the coefficients) in ABECLaplacian equation (Face-centered)
-!!  ascalar  - ascalar in ABECLaplacian equation 
-!!  bscalar  - bscalar in ABECLaplacian equation 
-!!   
-!!  THE EQUATION TO BE SOLVED   ::  
-!!  ascalar*alpha*Soln - bscalar*del dot (beta grad(Soln)) = Src
+!!
 !!
 !! SIDE EFFECTS
 !!
@@ -48,7 +42,7 @@
 !!
 !!***
 
-subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact,  iAlpha, iBeta, ascalar, bscalar)
+subroutine gr_amrexLsFixedPoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
   use Timers_interface, ONLY : Timers_start, Timers_stop
   use Driver_interface, ONLY : Driver_abortFlash
   use Grid_interface,   ONLY : GRID_PDE_BND_PERIODIC,  &
@@ -93,7 +87,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact,  iAlpha,
 #include "Flash.h"
 #include "constants.h"   
   
-  call Timers_start("Grid_solvePoisson")
+  call Timers_start("gr_amrexLsFixedPoisson")
      maxLevel = amrex_get_finest_level() !! TODO :: Check with Jared if this is the best wat to get max level of current 
                                                                    !! grid. There is likely a flash ssubroutine for same Grid_getMaxRefinement?
 !   Allocate space for multifab array storing phi (solution) and rhs
@@ -202,5 +196,5 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact,  iAlpha,
     call amrex_distromap_destroy(dm(ilev))
   end do
        
-  call Timers_stop("Grid_solvePoisson")
-end subroutine Grid_solvePoisson
+  call Timers_stop("gr_amrexLsFixedPoisson")
+end subroutine gr_amrexLsFixedPoisson
