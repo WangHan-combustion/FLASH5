@@ -30,7 +30,8 @@
 !!
 !!  bcValues - the values to boundary conditions, currently not used (treated as 0)
 !!  poisfact      - scaling factor to be used in calculation
-!!
+!!  
+!!  EQUATION TO BE SOLVED   ::  del dot grad(Soln) = Src  
 !!
 !! SIDE EFFECTS
 !!

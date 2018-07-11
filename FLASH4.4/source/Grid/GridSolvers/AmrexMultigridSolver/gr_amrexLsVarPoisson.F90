@@ -69,6 +69,8 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
   !!
   use amrex_multifab_module, ONLY : amrex_multifab, amrex_multifab_destroy, amrex_multifab_build_alias
 
+  use Grid_data, ONLY : gr_meshMe
+
   implicit none
   
     integer, intent(in)    :: iSoln, iSrc, iAlpha, iBeta
@@ -113,7 +115,7 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
        call amrex_abeclaplacian_build(abeclap,amrex_geom(0:maxLevel), rhs%ba, rhs%dm, &
             metric_term=.false., agglomeration=gr_amrexLs_agglomeration, consolidation=gr_amrexLs_consolidation)
 !            max_coarsening_level=max_coarsening_level)
-       call abeclap % set_maxorder(gr_amrexLs_linop_maxorder)
+!       call abeclap % set_maxorder(gr_amrexLs_linop_maxorder)
 
 !  Select BCs to send to AMReX solver
      do i=1,6
@@ -134,13 +136,13 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
        do ilev = 0, maxLevel
           ! for problem with pure homogeneous Neumann BC, we could pass an empty multifab otherwise pass solution (ilev)
 !          call abeclap  % set_level_bc(ilev, solution(ilev))
-          call abeclap % set_level_bc(ilev, null)
+ !         call abeclap % set_level_bc(ilev, null)
        end do
 
        call abeclap % set_scalars(ascalar, bscalar)
-       do ilev = 0, max_level
-          call abeclap % set_acoeffs(ilev, acoef(ilev))
-          call abeclap % set_bcoeffs(ilev, beta(:,ilev))
+       do ilev = 0, maxLevel
+!          call abeclap % set_acoeffs(ilev, acoef(ilev))
+!          call abeclap % set_bcoeffs(ilev, beta(:,ilev))
        end do
 
 
@@ -154,7 +156,7 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
 !       call multigrid % set_bottom_solver(bottom_solver)
 
        err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
-       if(pt_meshMe==MASTER_PE) then
+       if(gr_meshMe==MASTER_PE) then
           print*, err
        endif
 !      !!Finalize objects
