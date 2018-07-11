@@ -51,7 +51,7 @@
 !!
 !!***
 
-subroutine gr_amrexLsVarPoission (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, ascalar, bscalar)
+subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, ascalar, bscalar)
   use Timers_interface, ONLY : Timers_start, Timers_stop
   use Driver_interface, ONLY : Driver_abortFlash
   use Grid_interface,   ONLY : GRID_PDE_BND_PERIODIC,  &
