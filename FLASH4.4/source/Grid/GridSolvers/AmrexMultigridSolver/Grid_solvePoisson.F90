@@ -71,7 +71,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact, iAlpha, 
     call gr_amrexLsVarPoisson(iSoln, iSrc, bcTypes, bcValues, poisfact, iAlpha, iBeta, ascalar, bscalar)
   else
     !! call fixed coefficient poisson solver
-    call gr_amrexLsVarPoisson(iSoln, iSrc, bcTypes, bcValues, poisfact)
+    call gr_amrexLsFixedPoisson(iSoln, iSrc, bcTypes, bcValues, poisfact)
   endif
        
   call Timers_stop("Grid_solvePoisson")
