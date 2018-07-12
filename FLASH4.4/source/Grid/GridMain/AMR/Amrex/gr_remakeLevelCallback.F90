@@ -84,7 +84,8 @@ subroutine gr_remakeLevelCallback(lev, time, pba, pdm) bind(c)
                                           gr_doFluxCorrection
     use Grid_interface,            ONLY : Grid_getBlkPtr, Grid_releaseBlkPtr
     use gr_amrexInterface,         ONLY : gr_clearLevelCallback, &
-                                          gr_fillPhysicalBC
+                                          gr_fillPhysicalBC, &
+                                          gr_fillPhysicalFaceBC
     use gr_physicalMultifabs,      ONLY : unk, &
                                           facevarx, facevary, facevarz, &
                                           gr_scratchCtr, &
