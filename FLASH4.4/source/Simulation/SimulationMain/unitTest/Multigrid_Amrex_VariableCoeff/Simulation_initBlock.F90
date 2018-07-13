@@ -109,8 +109,8 @@ subroutine Simulation_initBlock(solnData,block)
           yi=yCenter(j)
           zi=zCenter(k)
 
-           Phi_ijk = cos(2.*PI*xi*pfb_waven_x/Lx + pfb_alpha_x) * &
-                     cos(2.*PI*yi*pfb_waven_y/Ly)*cos(2.*PI*zi*pfb_waven_z/Lz)
+           Phi_ijk = sin(2.*PI*xi*pfb_waven_x/Lx + pfb_alpha_x) * &
+                     sin(2.*PI*yi*pfb_waven_y/Ly)*sin(2.*PI*zi*pfb_waven_z/Lz)
 
   
            F_ijk  = -4.*PI**2 * ( (pfb_waven_x/Lx)**2. + (pfb_waven_y/Ly)**2. + (pfb_waven_z/Lz)**2. ) * Phi_ijk
@@ -119,7 +119,8 @@ subroutine Simulation_initBlock(solnData,block)
 
            solnData(i,j,k,RHS_VAR) = F_ijk
 
-           if(i==j .AND. j==k) solnData(i,j,k,ALPHA_VAR) = 1.1
+           solnData(i,j,k,ALPHA_VAR) = 0.0
+           solnData(i,j,k,DENS_VAR) = 1.0
 
         enddo
      enddo
@@ -134,15 +135,18 @@ subroutine Simulation_initBlock(solnData,block)
   call Grid_getBlkPtr(block,solnDatay,FACEY)
   call Grid_getBlkPtr(block,solnDataz,FACEZ)
 
-  do k=blkLimits(LOW,KAXIS),blkLimits(HIGH,KAXIS)
-     do j=blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS)
-        do i=blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS)
-              solnDatax(i,j,k,BETA_FACE_VAR) = 1.1
-              solnDatay(i,j,k,BETA_FACE_VAR) = 1.2
-              solnDataz(i,j,k,BETA_FACE_VAR) = 1.3
-  enddo
-     enddo
-        enddo
+!  do k=blkLimits(LOW,KAXIS),blkLimits(HIGH,KAXIS)
+!     do j=blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS)
+!        do i=blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS)
+!              solnDatax(i,j,k,BETA_FACE_VAR) = 1.0
+!              solnDatay(i,j,k,BETA_FACE_VAR) = 1.0
+!              solnDataz(i,j,k,BETA_FACE_VAR) = 1.0
+!  enddo
+!     enddo
+!        enddo
+  solnDatax(:,:,:,BETA_FACE_VAR) = 1.0
+  solnDatay(:,:,:,BETA_FACE_VAR) = 1.0
+  solnDataz(:,:,:,BETA_FACE_VAR) = 1.0
   
   call Grid_releaseBlkPtr(block,solnDatax,FACEX)
   call Grid_releaseBlkPtr(block,solnDatay,FACEY)
