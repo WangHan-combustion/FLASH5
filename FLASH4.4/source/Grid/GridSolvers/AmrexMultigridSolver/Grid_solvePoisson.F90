@@ -59,6 +59,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact, iAlpha, 
     real, intent(inout)    :: poisfact
     integer, intent(in), optional :: iAlpha, iBeta
     real, intent(inout), optional :: ascalar, bscalar
+    integer :: al, be
 
 #include "Flash.h"
 #include "constants.h"   
@@ -71,7 +72,10 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact, iAlpha, 
     call gr_amrexLsVarPoisson(iSoln, iSrc, bcTypes, bcValues, poisfact, iAlpha, iBeta, ascalar, bscalar)
   else
     !! call fixed coefficient poisson solver
-    call gr_amrexLsFixedPoisson(iSoln, iSrc, bcTypes, bcValues, poisfact)
+    !call gr_amrexLsFixedPoisson(iSoln, iSrc, bcTypes, bcValues, poisfact)
+    al=ALPHA_VAR
+    be=BETA_FACE_VAR
+    call gr_amrexLsVarPoisson(iSoln, iSrc, bcTypes, bcValues, poisfact, al, be, 1.0, 1.0)
   endif
        
   call Timers_stop("Grid_solvePoisson")

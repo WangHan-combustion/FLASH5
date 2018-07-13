@@ -74,19 +74,23 @@ use amrex_amr_module,     ONLY : amrex_init_from_scratch, &
   real, parameter :: tol = 1.e-6
   real, parameter :: tolInf = 4.1e-2
   real, parameter :: tol2  = 2.24e-2
+  integer :: iAlpha,iBeta
 
   integer TA(2),count_rate,ierr
   real :: ET
 
   ! -------------------------------------------------------------------
   bcTypes(:)=GRID_PDE_BND_NEUMANN  
-  bcTypes(3:4)=GRID_PDE_BND_DIRICHLET
+!  bcTypes(3:4)=GRID_PDE_BND_DIRICHLET
   bcValues(:,:)=0.
 
   call mpi_barrier(gr_meshComm,ierr)
   if (gr_meshMe .eq. 0) CALL SYSTEM_CLOCK(TA(1),count_rate)  
   poisfact=1.
-   call Grid_solvePoisson(NSOL_VAR, RHS_VAR, bcTypes, bcValues, poisfact)
+  iAlpha=ALPHA_VAR
+  iBeta=BETA_FACE_VAR
+  call Grid_solvePoisson(NSOL_VAR, RHS_VAR, bcTypes, bcValues, poisfact) !ALPHA_FACE_VAR, BETA_FACE_VAR
+!  call Grid_solvePoisson(NSOL_VAR, RHS_VAR, bcTypes, bcValues, poisfact, iAlpha=iAlpha, iBeta=iBeta)
   call mpi_barrier(gr_meshComm,ierr)
   if (gr_meshMe .eq. 0) then
      CALL SYSTEM_CLOCK(TA(2),count_rate)
