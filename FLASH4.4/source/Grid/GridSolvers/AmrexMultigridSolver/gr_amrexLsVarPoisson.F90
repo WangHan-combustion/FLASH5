@@ -67,7 +67,9 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
                                     gr_amrexLs_max_iter, gr_amrexLs_max_fmg_iter
   use gr_physicalMultifabs,  ONLY : unk, facevarx, facevary, facevarz
   !!
-  use amrex_multifab_module, ONLY : amrex_multifab, amrex_multifab_destroy, amrex_multifab_build_alias
+  use amrex_multifab_module, ONLY : amrex_multifab, amrex_multifab_destroy, amrex_multifab_build_alias, &
+                                  amrex_multifab_build
+  use amrex_multifabutil_module, ONLY :  amrex_average_cellcenter_to_face
 
   use Grid_data, ONLY : gr_meshMe
 
@@ -90,6 +92,12 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
     type(amrex_multifab), allocatable, save :: alpha(:)
     type(amrex_multifab), allocatable, save :: beta(:,:)
     type(amrex_multifab) :: null 
+type(amrex_multifab), allocatable, save :: beta2(:,:)
+logical :: nodal(3)
+!    type(amrex_boxarray), allocatable, save :: ba(:)
+!    type(amrex_distromap), allocatable, save :: dm(:)
+    integer :: idim
+
 !This temp_cc_beta is a cell-centered approx of beta. It is there only because we dont have facevars in flash5 yet.
 !this will eventually be delated and instead of interpolating cc_beta to face-cc beta(:,:) we just assign it as
 !beta(:,:)=[facevarx(iBeta) facevary(iBeta) facevarz(iBeta)] or beta = facevar(NDIM, iBeta)
@@ -107,6 +115,23 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
     allocate(rhs(0:maxLevel))
     allocate(alpha(0:maxLevel))
     allocate(beta(1:3,0:maxLevel))
+!!!!!!!!!!TEST BEGIN!!!!!!
+    allocate(beta2(NDIM,0:maxLevel))
+    allocate(temp_cc_beta(0:maxLevel))
+!    allocate(ba(0:maxLevel))
+!    allocate(dm(0:maxLevel))
+    do ilev = 0, maxLevel
+!       ba(ilev)=unk(ilev)%ba
+!       dm(ilev)=unk(ilev)%dm
+       call amrex_multifab_build_alias(temp_cc_beta(ilev), unk(ilev), DENS_VAR, 1)
+       do idim = 1, NDIM
+          nodal = .false.
+          nodal(idim) = .true.
+          call amrex_multifab_build(beta2(idim,ilev), unk(ilev)%ba, unk(ilev)%dm, 1, 0, nodal)
+       end do
+       call amrex_average_cellcenter_to_face(beta2(:,ilev), temp_cc_beta(ilev), amrex_geom(ilev))
+    end do
+!!!!!!!!!!TEST END!!!!!!!!!!!
 
 !     Create alias from multifab unk to rhs and solution with respective components in unk
     do ilev = 0, maxLevel
@@ -115,9 +140,12 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
         call amrex_multifab_build_alias(alpha(ilev), unk(ilev), iAlpha, 1)
         call amrex_multifab_build_alias(beta(1,ilev), facevarx(ilev), iBeta, 1)
         call amrex_multifab_build_alias(beta(2,ilev), facevary(ilev), iBeta, 1)
+#ifdef NDIM > 2
         call amrex_multifab_build_alias(beta(3,ilev), facevarz(ilev), iBeta, 1)
+#endif
         call solution(ilev)%setVal(0.0_amrex_real)
     end do
+
 !   Build abeclaplacian object with the geometry amrex_geom, boxarray unk%ba  and distromap unk%dm
        call amrex_abeclaplacian_build(abeclap,amrex_geom(0:maxLevel), rhs%ba, rhs%dm, &
             metric_term=.false., agglomeration=gr_amrexLs_agglomeration, consolidation=gr_amrexLs_consolidation)
@@ -142,17 +170,17 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
 
        do ilev = 0, maxLevel
           ! for problem with pure homogeneous Neumann BC, we could pass an empty multifab otherwise pass solution (ilev)
-          if(ALL(amrexPoissonBcTypes==amrex_lo_neumann)) then
-             call abeclap % set_level_bc(ilev, null)
-          else 
+!          if(ALL(amrexPoissonBcTypes==amrex_lo_neumann)) then
+!             call abeclap % set_level_bc(ilev, null)
+!          else 
              call abeclap  % set_level_bc(ilev, solution(ilev))
-          end if
+!          end if
        end do
 
        call abeclap % set_scalars(ascalar, bscalar)
        do ilev = 0, maxLevel
           call abeclap % set_acoeffs(ilev, alpha(ilev))
-          call abeclap % set_bcoeffs(ilev, beta(:,ilev))
+          call abeclap % set_bcoeffs(ilev, beta2(:,ilev))
        end do
 
 
@@ -177,7 +205,15 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
             call amrex_multifab_destroy(beta(1,ilev))
             call amrex_multifab_destroy(beta(2,ilev))
             call amrex_multifab_destroy(beta(3,ilev))
+
+!            call amrex_boxarray_destroy(ba(ilev))
+!            call amrex_distromap_destroy(dm(ilev))
+            call amrex_multifab_destroy(beta2(1,ilev))
+            call amrex_multifab_destroy(beta2(2,ilev))
+            call amrex_multifab_destroy(beta2(3,ilev))
+            call amrex_multifab_destroy(temp_cc_beta(ilev))
         end do
+
        call amrex_multigrid_destroy(multigrid)
        call amrex_abeclaplacian_destroy(abeclap)
        
