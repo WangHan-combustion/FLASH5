@@ -37,7 +37,8 @@ subroutine Simulation_initBlock(solnData,block)
   use Simulation_data, ONLY :sim_xMin,sim_xMax,sim_yMin,sim_yMax,sim_zMin,sim_zMax
   use Grid_interface, ONLY : Grid_getBlkIndexLimits, &
     Grid_getCellCoords, Grid_getBlkPtr, Grid_releaseBlkPtr, &
-    Grid_getBlkBoundBox, Grid_getBlkCenterCoords, Grid_getDeltas
+    Grid_getBlkBoundBox, Grid_getBlkCenterCoords, Grid_getDeltas, &
+    Grid_getBlkPtr, Grid_releaseBlkPtr
   use block_metadata, ONLY : block_metadata_t
 
   implicit none
@@ -51,6 +52,9 @@ subroutine Simulation_initBlock(solnData,block)
   integer :: blockID
   !!$ ---------------------------------
  
+  real,dimension(:,:,:,:),pointer :: solnDatax
+  real,dimension(:,:,:,:),pointer :: solnDatay
+  real,dimension(:,:,:,:),pointer :: solnDataz
   integer :: i, j, k
   integer, dimension(LOW:HIGH,MDIM) :: blkLimits, blkLimitsGC
 
@@ -106,7 +110,7 @@ subroutine Simulation_initBlock(solnData,block)
           zi=zCenter(k)
 
            Phi_ijk = cos(2.*PI*xi*pfb_waven_x/Lx + pfb_alpha_x) * &
-                     sin(2.*PI*yi*pfb_waven_y/Ly)*cos(2.*PI*zi*pfb_waven_z/Lz)
+                     cos(2.*PI*yi*pfb_waven_y/Ly)*cos(2.*PI*zi*pfb_waven_z/Lz)
 
   
            F_ijk  = -4.*PI**2 * ( (pfb_waven_x/Lx)**2. + (pfb_waven_y/Ly)**2. + (pfb_waven_z/Lz)**2. ) * Phi_ijk
@@ -114,6 +118,8 @@ subroutine Simulation_initBlock(solnData,block)
            solnData(i,j,k,ASOL_VAR) = Phi_ijk
 
            solnData(i,j,k,RHS_VAR) = F_ijk
+
+           if(i==j .AND. j==k) solnData(i,j,k,ALPHA_VAR) = 1.1
 
         enddo
      enddo
@@ -123,6 +129,24 @@ subroutine Simulation_initBlock(solnData,block)
   ! set values for u,v velocities and pressure
   solnData(:,:,:,DIFF_VAR) = 0.0
   solnData(:,:,:,NSOL_VAR) = 0.0
+
+  call Grid_getBlkPtr(block,solnDatax,FACEX)
+  call Grid_getBlkPtr(block,solnDatay,FACEY)
+  call Grid_getBlkPtr(block,solnDataz,FACEZ)
+
+  do k=blkLimits(LOW,KAXIS),blkLimits(HIGH,KAXIS)
+     do j=blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS)
+        do i=blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS)
+              solnDatax(i,j,k,BETA_FACE_VAR) = 1.1
+              solnDatay(i,j,k,BETA_FACE_VAR) = 1.2
+              solnDataz(i,j,k,BETA_FACE_VAR) = 1.3
+  enddo
+     enddo
+        enddo
+  
+  call Grid_releaseBlkPtr(block,solnDatax,FACEX)
+  call Grid_releaseBlkPtr(block,solnDatay,FACEY)
+  call Grid_releaseBlkPtr(block,solnDataz,FACEZ)
 
 !!$  write(*,*) 'BlockID=',blockID
 !!$  write(*,*) 'Center coordinates=',coord
