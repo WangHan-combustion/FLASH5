@@ -78,7 +78,7 @@ plotfileNumber = 0
 #wr_integrals_freq = 0
 #dr_printTStepLoc = .FALSE.
 
-nend            = 1000
+nend            = 100
 tmax            = .2
 
 run_comment     = "Sod problem, diagonal direction"

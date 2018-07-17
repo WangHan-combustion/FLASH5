@@ -69,7 +69,7 @@ plotfileIntervalTime = 0.
 plotfileIntervalStep = 0
 plotfileNumber = 0
 
-nend            = 10000
+nend            = 100
 tmax            = 0.05
 
 run_comment     = "Sedov explosion"
