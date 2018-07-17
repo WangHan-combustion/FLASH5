@@ -1,1 +1,1 @@
-./setup unitTest/Multigrid_Amrex -auto -3d  +serialio -unit=IO/IOMain/hdf5/serial/AM -index-reorder -maxblocks=1000 -site=sauc.xps -objdir=multigridamrex
+./setup unitTest/Multigrid_Amrex_VariableCoeff -auto -3d -unit=Grid/GridMain/AMR/Amrex +noio -index-reorder -maxblocks=1000 -site=sauc.xps -objdir=multigridamrex -debug
