@@ -57,7 +57,7 @@ subroutine Simulation_initBlock(solnData,block)
   real,allocatable, dimension(:) ::xCenter,yCenter,zCenter
   integer :: sizeX,sizeY,sizeZ
 
-  real :: Lx, Ly, Lz, xi, yi, zi, Phi_ijk, F_ijk, A, B, eB,fp
+  real :: Lx, Ly, Lz, xi, yi, zi, Phi_ijk, F_ijk, A, B, eB,kx,ksi
 
 
   real, parameter :: pfb_waven_x = 2.
@@ -98,7 +98,8 @@ subroutine Simulation_initBlock(solnData,block)
   Lx = sim_xMax - sim_xMin
   Ly = sim_yMax - sim_yMin  
   Lz = sim_zMax - sim_zMin
-  fp = 5.0*PI
+  kx = 5.0*PI/(Lx/2.0) !kx=ky=kz assuming Lx=Ly=Lz
+  ksi = 4.0/(Lx*Lx*twoSigma2) !for Lx=Ly=Lz
 
   do k = blkLimitsGC(LOW,KAXIS), blkLimitsGC(HIGH,KAXIS)
      do j = blkLimitsGC(LOW,JAXIS), blkLimitsGC(HIGH,JAXIS)
@@ -113,15 +114,15 @@ subroutine Simulation_initBlock(solnData,block)
 !  
 !           F_ijk  = -4.*PI**2 * ( (pfb_waven_x/Lx)**2. + (pfb_waven_y/Ly)**2. + (pfb_waven_z/Lz)**2. ) * Phi_ijk
 
-           xi=xi*2/Lx; yi=yi*2/Ly; zi = zi*2/Lz; twosigma2=twosigma2/(Lx*Ly/4.0)
-           A = sin(fp*xi)*sin(fp*yi)*sin(fp*zi)
-           B = 25.*xi*xi + 25.*yi*yi + 25.*zi*zi
+           A = sin(kx*xi)*sin(kx*yi)*sin(kx*zi)
+           B = ksi*(xi*xi + yi*yi + zi*zi)
            eB = exp(-B)
-          Phi_ijk = A*exp((-xi*xi-yi*yi-zi*zi)/twoSigma2)
-           F_ijk=(-3*fp**2-150+100*B)*A*eB
-F_ijk=F_ijk-500*PI*xi*eB*cos(fp*xi)*sin(fp*yi)*sin(fp*zi)
-F_ijk=F_ijk-500*PI*yi*eB*sin(fp*xi)*cos(fp*yi)*sin(fp*zi)
-F_ijk=F_ijk-500*PI*zi*eB*sin(fp*xi)*sin(fp*yi)*cos(fp*zi)
+           Phi_ijk = A*eB
+           F_ijk = (4.0*ksi*B-6.0*ksi-3*kx**2)*A
+F_ijk=F_ijk-4.0*ksi*kx*xi*cos(kx*xi)*sin(kx*yi)*sin(kx*zi)
+F_ijk=F_ijk-4.0*ksi*kx*yi*sin(kx*xi)*cos(kx*yi)*sin(kx*zi)
+F_ijk=F_ijk-4.0*ksi*kx*zi*sin(kx*xi)*sin(kx*yi)*cos(kx*zi)
+           F_ijk = F_ijk*eB
 
            solnData(i,j,k,ASOL_VAR) = Phi_ijk
 
