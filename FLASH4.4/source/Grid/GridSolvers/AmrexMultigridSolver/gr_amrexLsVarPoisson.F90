@@ -57,7 +57,9 @@ subroutine gr_amrexLsVarPoisson (iSoln, iSrc, bcTypes, bcValues, iAlpha, iBeta, 
   use Grid_interface,   ONLY : GRID_PDE_BND_PERIODIC,  &
        GRID_PDE_BND_NEUMANN,   &
        GRID_PDE_BND_DIRICHLET
-  use amrex_multigrid_module, ONLY : amrex_multigrid, amrex_multigrid_build, amrex_multigrid_destroy
+  use amrex_multigrid_module, ONLY : amrex_multigrid, amrex_multigrid_build, amrex_multigrid_destroy, &
+                                     amrex_bottom_default, amrex_bottom_hypre, amrex_bottom_bicgstab, &
+                                     amrex_bottom_smoother, amrex_bottom_cg
   use amrex_abeclaplacian_module, ONLY : amrex_abeclaplacian, amrex_abeclaplacian_build, amrex_abeclaplacian_destroy
   use amrex_lo_bctypes_module, ONLY : amrex_lo_periodic, amrex_lo_dirichlet, amrex_lo_neumann
   use amrex_amr_module, ONLY : amrex_geom, amrex_get_finest_level, amrex_max_level
@@ -150,7 +152,7 @@ logical :: nodal(3)
        call amrex_abeclaplacian_build(abeclap,amrex_geom(0:maxLevel), rhs%ba, rhs%dm, &
             metric_term=.false., agglomeration=gr_amrexLs_agglomeration, consolidation=gr_amrexLs_consolidation)
 !            max_coarsening_level=max_coarsening_level)
-!       call abeclap % set_maxorder(gr_amrexLs_linop_maxorder)
+       call abeclap % set_maxorder(gr_amrexLs_linop_maxorder)
 
 !  Select BCs to send to AMReX solver
      do i=1,6
@@ -170,11 +172,11 @@ logical :: nodal(3)
 
        do ilev = 0, maxLevel
           ! for problem with pure homogeneous Neumann BC, we could pass an empty multifab otherwise pass solution (ilev)
-!          if(ALL(amrexPoissonBcTypes==amrex_lo_neumann)) then
-!             call abeclap % set_level_bc(ilev, null)
-!          else 
+          if(ALL(amrexPoissonBcTypes==amrex_lo_neumann)) then
+             call abeclap % set_level_bc(ilev, null)
+          else 
              call abeclap  % set_level_bc(ilev, solution(ilev))
-!          end if
+          end if
        end do
 
        call abeclap % set_scalars(ascalar, bscalar)
@@ -191,7 +193,7 @@ logical :: nodal(3)
        call multigrid % set_max_iter(gr_amrexLs_max_iter)
        call multigrid % set_max_fmg_iter(gr_amrexLs_max_fmg_iter)
        !uncomment to invoke following when amrex lib has been updated
-!       call multigrid % set_bottom_solver(bottom_solver)
+       call multigrid % set_bottom_solver(amrex_bottom_default)
 
        err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
        if(gr_meshMe==MASTER_PE) then
