@@ -182,7 +182,7 @@ logical :: nodal(3)
        call abeclap % set_scalars(ascalar, bscalar)
        do ilev = 0, maxLevel
           call abeclap % set_acoeffs(ilev, alpha(ilev))
-          call abeclap % set_bcoeffs(ilev, beta2(:,ilev))
+          call abeclap % set_bcoeffs(ilev, beta(:,ilev))
        end do
 
 
@@ -193,9 +193,9 @@ logical :: nodal(3)
        call multigrid % set_max_iter(gr_amrexLs_max_iter)
        call multigrid % set_max_fmg_iter(gr_amrexLs_max_fmg_iter)
        !uncomment to invoke following when amrex lib has been updated
-       call multigrid % set_bottom_solver(amrex_bottom_default)
+!       call multigrid % set_bottom_solver(amrex_bottom_cg)
 
-       err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
+       err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 1.e-15_amrex_real)
        if(gr_meshMe==MASTER_PE) then
           print*, err
        endif
