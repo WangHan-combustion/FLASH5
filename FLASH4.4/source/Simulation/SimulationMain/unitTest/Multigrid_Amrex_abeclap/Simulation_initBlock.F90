@@ -123,6 +123,8 @@ subroutine Simulation_initBlock(solnData,block)
   ! set values for u,v velocities and pressure
   solnData(:,:,:,DIFF_VAR) = 0.0
   solnData(:,:,:,NSOL_VAR) = 0.0
+  solnData(:,:,:,ALPHACC_VAR) = 1.0
+  solnData(:,:,:,BETACC_VAR) = 1.0
 
 !!$  write(*,*) 'BlockID=',blockID
 !!$  write(*,*) 'Center coordinates=',coord
