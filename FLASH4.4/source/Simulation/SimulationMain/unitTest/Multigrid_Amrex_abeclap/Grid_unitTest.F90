@@ -50,7 +50,7 @@ use amrex_lo_bctypes_module
                                     gr_amrexLs_linop_maxorder, gr_amrexLs_verbose, gr_amrexLs_cg_verbose, &
                                     gr_amrexLs_max_iter,gr_amrexLs_max_fmg_iter,&
                              gr_amrexLs_composite_solve, gr_amrexLs_ref_ratio
-  use gr_physicalMultifabs,      ONLY : unk
+  use gr_physicalMultifabs,      ONLY : unk!, facevarx, facevary, facevarz
  
 !,     ONLY : amrex_init_from_scratch, &
 !                                   amrex_max_level
@@ -142,48 +142,26 @@ use amrex_lo_bctypes_module
   bcValues(:,:)=0.
 !!-----------------------------------------------------------!!
 !!allocate
+    max_level = amrex_get_finest_level()
     allocate(geom(0:max_level))
     allocate(ba(0:max_level))
     allocate(dm(0:max_level))
     allocate(solution(0:max_level))
     allocate(rhs(0:max_level))
     allocate(exact_solution(0:max_level))
-!    if (prob_type .eq. 2) then
        allocate(acoef(0:max_level))
        allocate(bcoef(0:max_level))
-!    end if
-!!init geom
-    call amrex_geometry_set_coord_sys(0)  ! Cartesian
-    call amrex_geometry_set_prob_domain([0._amrex_real,0._amrex_real,0._amrex_real], &
-         &                              [1._amrex_real,1._amrex_real,1._amrex_real])
-    call amrex_geometry_set_periodic([.false., .false., .false.])
-    domain = amrex_box([0,0,0], [n_cell-1,n_cell-1,n_cell-1])
-    do ilev = 0, max_level
-       call amrex_geometry_build(geom(ilev), domain)
-       call domain % refine(ref_ratio)
-    end do
-
-!!init grid
-    dom = geom(0) % domain
-    do ilev = 0, max_level
-       call amrex_boxarray_build(ba(ilev), dom)
-       call ba(ilev) % maxSize(max_grid_size)
-       call dom % grow(-n_cell/4)     ! fine level cover the middle of the coarse domain
-       call dom % refine(ref_ratio)
-    end do
 
 !!init mf
     do ilev = 0, max_level
-       call amrex_distromap_build(dm(ilev),ba(ilev))
-       ! one ghost cell to store boundary conditions
-       call amrex_multifab_build(solution(ilev), ba(ilev), dm(ilev), nc=1, ng=1)
-       call amrex_multifab_build(rhs(ilev), ba(ilev), dm(ilev), nc=1, ng=0)
-       call amrex_multifab_build(exact_solution(ilev), ba(ilev), dm(ilev), nc=1, ng=0)
-       if (allocated(acoef)) then
-          call amrex_multifab_build(acoef(ilev), ba(ilev), dm(ilev), nc=1, ng=0)
-          ! 1 ghost cell for averaging from cell centers to faces
-          call amrex_multifab_build(bcoef(ilev), ba(ilev), dm(ilev), nc=1, ng=1)
-       end if
+       call amrex_multifab_build_alias(solution(ilev), unk(ilev), NSOL_VAR, 1)
+       call amrex_multifab_build_alias(rhs(ilev), unk(ilev), RHS_VAR, 1)
+       call amrex_multifab_build_alias(exact_solution(ilev), unk(ilev), ASOL_VAR, 1)
+       call amrex_multifab_build_alias(acoef(ilev), unk(ilev), ALPHACC_VAR, 1)
+       call amrex_multifab_build_alias(bcoef(ilev), unk(ilev), BETACC_VAR, 1)
+       ba(ilev) = rhs(ilev)%ba
+       dm(ilev) = rhs(ilev)%dm
+       geom(ilev) = amrex_geom(ilev)
     end do
 
 !!init_prob_abeclap
@@ -231,8 +209,11 @@ use amrex_lo_bctypes_module
           call amrex_multifab_build(beta(idim,ilev), ba(ilev), dm(ilev), 1, 0, nodal)
        end do
        call amrex_average_cellcenter_to_face(beta(:,ilev), bcoef(ilev), geom(ilev))
+!       call amrex_multifab_build_alias(beta(1,ilev), facevarx(ilev), BETA_FACE_VAR, 1)
+!       call amrex_multifab_build_alias(beta(2,ilev), facevary(ilev), BETA_FACE_VAR, 1)
+!       call amrex_multifab_build_alias(beta(3,ilev), facevarz(ilev), BETA_FACE_VAR, 1)      
     end do
-
+     
        call amrex_abeclaplacian_build(abeclap, geom, ba, dm, &
             metric_term=.false., agglomeration=agglomeration, consolidation=consolidation, &
             max_coarsening_level=max_coarsening_level)
@@ -266,8 +247,16 @@ use amrex_lo_bctypes_module
        call multigrid % set_max_fmg_iter(max_fmg_iter)
        call multigrid % set_bottom_solver(bottom_solver)
 
+  call mpi_barrier(gr_meshComm,ierr)
+  if (gr_meshMe .eq. 0) CALL SYSTEM_CLOCK(TA(1),count_rate)  
        err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
-       print*,"Example Solve Complete...!!! err: ", err
+  call mpi_barrier(gr_meshComm,ierr)
+  if (gr_meshMe .eq. 0) then
+     CALL SYSTEM_CLOCK(TA(2),count_rate)
+     ET=REAL(TA(2)-TA(1))/count_rate
+     write(*,*) ' ' 
+     write(*,*) '3 PERIODIC Poisson Solver time = ',ET,' sec.'
+  endif
        call amrex_abeclaplacian_destroy(abeclap)
        call amrex_multigrid_destroy(multigrid)
 
@@ -286,23 +275,6 @@ use amrex_lo_bctypes_module
     end do
 
 !!-----------------------------------------------------------!!
-
-
-
-  call mpi_barrier(gr_meshComm,ierr)
-  if (gr_meshMe .eq. 0) CALL SYSTEM_CLOCK(TA(1),count_rate)  
-  poisfact=1.
-!   call Grid_solvePoisson(NSOL_VAR, RHS_VAR, bcTypes, bcValues, poisfact)
-  call mpi_barrier(gr_meshComm,ierr)
-  if (gr_meshMe .eq. 0) then
-     CALL SYSTEM_CLOCK(TA(2),count_rate)
-     ET=REAL(TA(2)-TA(1))/count_rate
-     write(*,*) ' ' 
-     write(*,*) '3 PERIODIC Poisson Solver time = ',ET,' sec.'
-  endif
-
-
-
   ! Check error in the solution:
   L2_err = 0.
   blkpoints = 0.
