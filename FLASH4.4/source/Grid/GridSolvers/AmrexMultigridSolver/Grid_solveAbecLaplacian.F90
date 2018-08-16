@@ -159,6 +159,7 @@ subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, bcTypes, bcValue
           call Driver_abortFlash('BC unsupported or not implemented for AMReX AbecLaplacian solver!')
        end select
      end do
+     gr_amrexLs_composite_solve=.TRUE.
 
   if(gr_amrexLs_composite_solve) then
        call amrex_abeclaplacian_build(abeclap, amrex_geom(0:maxLevel), ba, dm, &
@@ -200,7 +201,7 @@ subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, bcTypes, bcValue
        call amrex_abeclaplacian_destroy(abeclap)
   else
 !else do level by level solve instead of composite. Lbl seems to be always ~2x faster than composite
-    call Driver_abortFlash('BC unsupported or not implemented for AMReX AbecLaplacian solver!')
+    call Driver_abortFlash('Level by level solve for AbecLaplacian not implemented. Try gr_amrexLs_composite_solve=.TRUE.!')
     do ilev = 0, maxLevel
     end do
   endif
