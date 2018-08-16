@@ -1,4 +1,5 @@
 D This unit test is meant only for AMReX grid. Do not use any other grid type!
+D ./setup unitTest/Multigrid_Amrex_Abeclap -auto -3d -index-reorder -maxblocks=1000 -site=sauc.xps -objdir=abeclap -debug --unit=IO/IOMain/hdf5/serial/AM
 
 REQUIRES Driver
 REQUIRES Grid/GridMain/AMR/Amrex
