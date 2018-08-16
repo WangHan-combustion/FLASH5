@@ -33,7 +33,10 @@ module gr_amrexLsData
   integer, save :: gr_amrexLs_ref_ratio = 2
   integer, save :: gr_amrexLs_n_cell
   integer, save :: gr_amrexLs_max_grid_size
-
+  integer, save :: gr_amrexLs_max_coarsening_level = 30
+  ! bottom_solver not set = amrex_bottom_default so as we don't use `amrex_multigrid module` explicitly.
+  ! 1=value of `amrex_bottom_default`. Improves stability for code not using Linear Solver modules
+  integer, save :: gr_amrexLs_bottom_solver = 1 
   logical, save :: gr_amrexLs_composite_solve = .FALSE.
 
   ! prob_type 1 here is Poisson with homogeneous Dirichlet boundary.

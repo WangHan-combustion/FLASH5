@@ -55,7 +55,7 @@ subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, bcTypes, bcValue
   use Grid_interface,   ONLY : GRID_PDE_BND_PERIODIC,  &
        GRID_PDE_BND_NEUMANN,   &
        GRID_PDE_BND_DIRICHLET
-  use amrex_multigrid_module, ONLY : amrex_multigrid, amrex_multigrid_build, amrex_multigrid_destroy
+  use amrex_multigrid_module, ONLY : amrex_multigrid, amrex_multigrid_build, amrex_multigrid_destroy, amrex_bottom_default
   use amrex_abeclaplacian_module, ONLY : amrex_abeclaplacian, amrex_abeclaplacian_build, amrex_abeclaplacian_destroy
   use amrex_lo_bctypes_module, ONLY : amrex_lo_periodic, amrex_lo_dirichlet, amrex_lo_neumann
   use amrex_amr_module, ONLY : amrex_geom, amrex_get_finest_level, amrex_max_level
@@ -63,7 +63,8 @@ subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, bcTypes, bcValue
   use gr_amrexLsData, ONLY : gr_amrexLs_agglomeration, gr_amrexLs_consolidation, &
                                     gr_amrexLs_linop_maxorder, gr_amrexLs_verbose, gr_amrexLs_cg_verbose, &
                                     gr_amrexLs_max_iter,gr_amrexLs_max_fmg_iter,&
-                             gr_amrexLs_composite_solve, gr_amrexLs_ref_ratio
+                                    gr_amrexLs_composite_solve, gr_amrexLs_ref_ratio,&
+                                    gr_amrexLs_max_coarsening_level, gr_amrexLs_bottom_solver
   use gr_physicalMultifabs,  ONLY : unk
   !!
   use amrex_multifab_module, ONLY : amrex_multifab, amrex_multifab_destroy, & 
@@ -155,11 +156,54 @@ subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, bcTypes, bcValue
        case (GRID_PDE_BND_DIRICHLET)
           amrexPoissonBcTypes(i)=amrex_lo_dirichlet
        case default
-          call Driver_abortFlash('Only periodic BC implemented for AMReX poisson solver!')
+          call Driver_abortFlash('BC unsupported or not implemented for AMReX AbecLaplacian solver!')
        end select
      end do
 
+  if(gr_amrexLs_composite_solve) then
+       call amrex_abeclaplacian_build(abeclap, amrex_geom(0:maxLevel), ba, dm, &
+            metric_term=.false., agglomeration=gr_amrexLs_agglomeration, &
+            consolidation=gr_amrexLs_consolidation, max_coarsening_level=gr_amrexLs_max_coarsening_level)
+       call abeclap % set_maxorder(gr_amrexLs_linop_maxorder)
 
+       ! This is set up to have homogeneous Neumann BC
+       call abeclap % set_domain_bc([amrexPoissonBcTypes(1),amrexPoissonBcTypes(3),amrexPoissonBcTypes(5)], &
+          &                       [amrexPoissonBcTypes(2),amrexPoissonBcTypes(4),amrexPoissonBcTypes(6)])
+
+       if (ilev > 0) then
+          ! use coarse level data to set up bc at corase/fine boundary
+          call abeclap % set_coarse_fine_bc(solution(ilev-1), gr_amrexLs_ref_ratio)
+       end if
+
+       do ilev = 0, maxLevel
+          ! for problem with pure homogeneous Neumann BC, we could pass an empty multifab
+          call abeclap % set_level_bc(ilev, solution (ilev))
+       end do
+
+       call abeclap % set_scalars(ascalar, bscalar)
+       do ilev = 0, maxLevel
+          call abeclap % set_acoeffs(ilev, acoef(ilev))
+          call abeclap % set_bcoeffs(ilev, beta(:,ilev))
+       end do
+
+       call amrex_multigrid_build(multigrid, abeclap)
+       call multigrid % set_verbose(gr_amrexLs_verbose)
+       call multigrid % set_cg_verbose(gr_amrexLs_cg_verbose)
+       call multigrid % set_max_iter(gr_amrexLs_max_iter)
+       call multigrid % set_max_fmg_iter(gr_amrexLs_max_fmg_iter)
+       gr_amrexLs_bottom_solver = amrex_bottom_default
+       call multigrid % set_bottom_solver(gr_amrexLs_bottom_solver)
+
+       err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
+       if (gr_globalMe .eq. 0) print*, err
+       call amrex_multigrid_destroy(multigrid)
+       call amrex_abeclaplacian_destroy(abeclap)
+  else
+!else do level by level solve instead of composite. Lbl seems to be always ~2x faster than composite
+    call Driver_abortFlash('BC unsupported or not implemented for AMReX AbecLaplacian solver!')
+    do ilev = 0, maxLevel
+    end do
+  endif
  !!Finalize temporary alias objects
   do ilev = 0, maxLevel
        call amrex_geometry_destroy(geom(ilev))
