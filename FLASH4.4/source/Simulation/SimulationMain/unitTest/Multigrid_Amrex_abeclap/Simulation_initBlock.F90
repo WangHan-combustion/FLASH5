@@ -64,6 +64,7 @@ subroutine Simulation_initBlock(solnData,block)
   real, parameter :: pfb_waven_y = 1.
   real, parameter :: pfb_waven_z = 2.
   real, parameter :: pfb_alpha_x = 0.
+  real, parameter :: factor = 4.0
 
   logical :: gcell = .true.
 
@@ -113,7 +114,9 @@ subroutine Simulation_initBlock(solnData,block)
            
            solnData(i,j,k,ASOL_VAR) = Phi_ijk
 
-           solnData(i,j,k,RHS_VAR) = F_ijk
+! Rhs is some factor times the F_ijk for the cosine functions. Beta coefficients are all initialized with same factor.
+! The Numerical solution comes out same as independepnt of this factor as BETACC_VAR = factor.
+           solnData(i,j,k,RHS_VAR) = factor*F_ijk
 
         enddo
      enddo
@@ -124,7 +127,7 @@ subroutine Simulation_initBlock(solnData,block)
   solnData(:,:,:,DIFF_VAR) = 0.0
   solnData(:,:,:,NSOL_VAR) = 0.0
   solnData(:,:,:,ALPHACC_VAR) = 1.0
-  solnData(:,:,:,BETACC_VAR) = 1.0
+  solnData(:,:,:,BETACC_VAR) = factor
 
 !!$  write(*,*) 'BlockID=',blockID
 !!$  write(*,*) 'Center coordinates=',coord
