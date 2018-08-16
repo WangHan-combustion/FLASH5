@@ -790,6 +790,18 @@ Module Grid_interface
      end subroutine Grid_solvePoisson
   end interface
   
+   interface 
+     subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, &
+                bcTypes, bcValues, poisfact,ascalar,bscalar)
+       implicit none
+    integer, intent(in)    :: iSoln, iSrc, iAlpha, iBeta
+    integer, intent(in)    :: bcTypes(6)
+    real, intent(in)       :: bcValues(2,6)
+    real, intent(in)       :: ascalar, bscalar
+    real, intent(inout)    :: poisfact
+    end subroutine Grid_solveAbecLaplacian
+  end interface
+  
   interface 
      subroutine Grid_advanceDiffusion (iVar, iSrc, iFactorB, iFactorA, bcTypes, bcValues, dt, chi, scaleFact, &
           theta, solnIsDelta, iFactorC, iFactorD, pass)       
