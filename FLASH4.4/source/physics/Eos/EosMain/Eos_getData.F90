@@ -100,6 +100,7 @@ subroutine Eos_getData(range,vecLen,solnData,gridDataStruct,eosData,massFrac, eo
 
   use Eos_data, ONLY: eos_eintSwitch, eos_smalle, eos_mapLookup
   use Driver_interface, ONLY : Driver_abortFlash
+  use Eos_interface, ONLY : Eos_getData_loop1
   implicit none
   
 #include "Eos.h"
@@ -188,54 +189,9 @@ subroutine Eos_getData(range,vecLen,solnData,gridDataStruct,eosData,massFrac, eo
   do k = kb,ke
      do j = jb,je
         do i = ib,ie
-           if (velx_map > 0 .AND. vely_map > 0 .AND. velz_map > 0) then
-              kineticEnergy  = 0.5*(solnData(velx_map,i,j,k)**2 + &
-                                    solnData(vely_map,i,j,k)**2 + &
-                                    solnData(velz_map,i,j,k)**2)
-           else
-              kineticEnergy = 0.0
-           end if
-           
-           n=n+1
-           eosData(ekin+n) = kineticEnergy
-           !! kineticEnergy holds velocity vector information -- 1/2 * Vmag**2
-           !! internalEnergy holds eint (directly)  or energyTotal - ekinetic (calculated),
-           !!          depending upon eintSwitch
-           if(eint_map /= NONEXISTENT) then
-              internalEnergy  = solnData(eint_map,i,j,k)
-              if(ener_map /= NONEXISTENT) then
-                 if ( solnData(ener_map,i,j,k) - kineticEnergy > max(eos_smalle, eos_eintSwitch*kineticEnergy)) then
-                    internalEnergy = solnData(ener_map,i,j,k) - kineticEnergy
-                 end if
-              end if
-           else if(game_map /= NONEXISTENT) then ! This case should be usable for R(elativistic)HD - KW
-              internalEnergy  = solnData(pres_map,i,j,k) / solnData(dens_map,i,j,k) / &
-                                   (solnData(game_map,i,j,k) - 1.0)
-              if(ener_map /= NONEXISTENT) then
-                 if ( solnData(ener_map,i,j,k) - kineticEnergy > max(eos_smalle, eos_eintSwitch*kineticEnergy)) then
-                    internalEnergy = solnData(ener_map,i,j,k) - kineticEnergy
-                 end if
-              end if
-           else if(ener_map /= NONEXISTENT) then
-              internalEnergy = solnData(ener_map,i,j,k)-kineticEnergy
-           else
-              internalEnergy = eos_smalle
-           endif
-           
-           internalEnergy = max(internalEnergy, eos_smalle)
-           eosData(eint+n) = internalEnergy
-           
-           eosData(pres+n) = solnData(pres_map,i,j,k)
-           eosData(dens+n) = solnData(dens_map,i,j,k)
-           eosData(temp+n) = solnData(temp_map,i,j,k)
-           eosData(gamc+n) = solnData(gamc_map,i,j,k)
-           if((ye_map /= NONEXISTENT).and.(sumy_map /= NONEXISTENT)) then
-              !! cal says abar=1/sumy
-              !! cal says zbar=ye / sumy and he claims sumy are never zero
-              eosData(abar+n) =  1.0 /  solnData(sumy_map,i,j,k)
-              eosData(zbar+n) = solnData(ye_map,i,j,k) /  solnData(sumy_map,i,j,k)
-           endif
-           if(entr_map /= NONEXISTENT) eosData(entr+n) = solnData(entr_map,i,j,k)
+           call Eos_getData_loop1(vecLen, eosData, solnData, i,j,k,n, pres_map,dens_map,gamc_map,&
+                    game_map,temp_map,entr_map,eint_map,ener_map, velx_map, vely_map, velz_map, &
+                    sumy_map, ye_map, pres,dens,gamc,temp,abar,zbar,eint,ekin,entr)
         end do
      end do
   end do
