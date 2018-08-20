@@ -1053,4 +1053,14 @@ Module hy_interface
      end subroutine hy_updateSolution
   end interface
 
+  interface
+   subroutine  hy_getReimannState_loop1(dir, U, i,j,k, temp)
+   implicit none
+    integer, intent(in) :: dir
+    real, pointer, dimension(:,:,:,:) :: U
+    integer, intent(in) :: i,j,k
+    real, dimension(5), intent(inout) :: temp
+   end subroutine hy_getReimannState_loop1
+  end interface
+
 End Module hy_interface

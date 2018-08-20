@@ -9,6 +9,7 @@ Hydro += Hydro_data.o\
 	hy_entropyFix.o\
 	hy_slopeLimiters.o\
 	hy_getRiemannState.o\
+	hy_getRiemannState_loop1.o\
 	hy_dataReconstOneStep.o\
 	hy_eigenParameters.o\
 	hy_eigenValue.o\
