@@ -53,11 +53,9 @@ Module ins_interface
 
 
   interface
-     subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
+     subroutine ins_ab2rk3(timeEndAdv, dt)
        implicit none
        !! ---- Argument List ----------------------------------
-       integer, INTENT(INOUT) ::  blockCount
-       integer, INTENT(INOUT), dimension(MAXBLOCKS) :: blockList
        real,    INTENT(IN) :: timeEndAdv,dt
        !! -----------------------------------------------------
      end subroutine ins_ab2rk3
@@ -192,10 +190,8 @@ Module ins_interface
 
    interface
 
-      subroutine ins_computeQinout( blockCount, blockList, inou_flg,  Qinout)
+      subroutine ins_computeQinout(inou_flg,  Qinout)
         implicit none
-        integer, INTENT(IN) :: blockCount
-        integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList
         logical, INTENT(IN) :: inou_flg
         real,    INTENT(OUT) :: Qinout
       end subroutine
@@ -204,10 +200,8 @@ Module ins_interface
 
    interface
 
-      subroutine ins_rescaleVelout( blockCount, blockList, Qin,  Qout)
+      subroutine ins_rescaleVelout(Qin,  Qout)
         implicit none
-        integer, INTENT(IN) :: blockCount
-        integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList
         real,    INTENT(IN) :: Qin, Qout
       end subroutine
 
@@ -215,21 +209,17 @@ Module ins_interface
 
    interface
 
-      subroutine ins_convectVelout( blockCount, blockList, convvel)
+      subroutine ins_convectVelout(convvel)
         implicit none
-        integer, INTENT(IN) :: blockCount
-        integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList
         real,    INTENT(OUT) :: convvel(LOW:HIGH,MDIM)
       end subroutine
 
    end interface
 
    interface
-      subroutine ins_UstarStats( blockCount, blockList, print_flg, qin_flg)
+      subroutine ins_UstarStats(print_flg, qin_flg)
         implicit none
         !! ---- Argument List ----------------------------------
-        integer, INTENT(IN) :: blockCount
-        integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList 
         logical, INTENT(IN) :: print_flg, qin_flg
         !! -----------------------------------------------------
       end subroutine ins_UstarStats

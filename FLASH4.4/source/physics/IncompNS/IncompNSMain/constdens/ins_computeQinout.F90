@@ -30,7 +30,7 @@
 !!
 !!***
 
-subroutine ins_computeQinout( blockCount, blockList, inou_flg, Qinout)
+subroutine ins_computeQinout(inou_flg, Qinout)
 
 #include "Flash.h"
   use Grid_interface, only : Grid_getDeltas,         &

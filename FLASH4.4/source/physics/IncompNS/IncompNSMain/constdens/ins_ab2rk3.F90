@@ -36,7 +36,7 @@
 !!
 !!***
 
-subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
+subroutine ins_ab2rk3(timeEndAdv, dt)
 
 #include "Flash.h"
 
@@ -54,7 +54,8 @@ subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
                              Grid_conserveFluxes,    &
                              Grid_conserveField,     &
                              Grid_updateRefinement,  &
-                             Grid_solvePoisson, Grid_getBlkBoundBox, Grid_getBlkCenterCoords
+                             Grid_solvePoisson, Grid_getBlkBoundBox, Grid_getBlkCenterCoords, &
+                             Grid_getLeafIterator,Grid_releaseLeafIterator
 
   use Grid_interface, ONLY : Grid_conserveField
 
@@ -83,6 +84,12 @@ subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
 
   use Driver_interface, only : Driver_getNStep
 
+  use leaf_iterator,    ONLY : leaf_iterator_t
+  use block_metadata,   ONLY : block_metadata_t
+
+  use amrex_amr_module, ONLY : amrex_init_from_scratch, &
+                               amrex_max_level
+
   implicit none
 
 #include "constants.h"
@@ -91,10 +98,11 @@ subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
 
 
   !! ---- Argument List ----------------------------------
-  integer, INTENT(INOUT) :: blockCount
-  integer, INTENT(INOUT), dimension(MAXBLOCKS) :: blockList !blockCount
   real,    INTENT(IN) :: timeEndAdv,dt
   !! -----------------------------------------------------
+
+  type(leaf_iterator_t) :: itor
+  type(block_metadata_t) :: block
 
   integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
 
@@ -156,7 +164,6 @@ subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
   character(len=6) :: IndNStep
   integer :: NStep
 ! --------------------------------------------------------------------------
-
 
   CALL SYSTEM_CLOCK(TA(1),count_rate)
 
@@ -313,16 +320,17 @@ subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
   ! These two subroutine calls ar used in case of outflow BCs, only when NEUMANN_INS and
   ! OUTFLOW_INS are present.
   ! Compute inflow volume ratio: (Not computed on NOT_BOUNDARY, NEUMANN_INS, OUTFLOW_INS)
-  call ins_computeQinout( blockCount, blockList, .true., ins_Qin)
+  call ins_computeQinout(.true., ins_Qin)
 
   ! For OUTFLOW_INS condition compute convective velocity
-  call ins_convectVelout( blockCount, blockList, ins_convvel)
+  call ins_convectVelout(ins_convvel)
   !if(ins_meshMe .eq. MASTER_PE) write(*,*) 'After convect',ins_convvel(HIGH,:)
 
   ! TURBULENT VISCOSITY COMPUTATION:
   ! --------- --------- -----------
 #if NDIM == 3
   if (ins_isgs .NE. 0) then
+     call Grid_getLeafIterator
      do lb = 1,blockCount
         blockID = blockList(lb)
 
@@ -482,13 +490,6 @@ subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
 #endif
   call Timers_stop("Gcell_IntermVelocs")
 
-!!$  ! Compute outflow mass volume ratio: (computed on NEUMANN_INS, OUTFLOW_INS)
-!!$  call ins_computeQinout( blockCount, blockList, .false., ins_Qout)
-!!$  !write(*,*) 'Qout before ref=',ins_Qout
-!!$
-!!$  ! Rescale Velocities at outflows for overall conservation:
-!!$  call ins_rescaleVelout(  blockCount, blockList, ins_Qin, ins_Qout)
-
   if (ist .eq. 1) then
   call Timers_start("Grid_updateRefinement")
   call Grid_updateRefinement( ins_nstep, timeEndAdv ,gridChanged)
@@ -496,18 +497,15 @@ subroutine ins_ab2rk3( blockCount, blockList, timeEndAdv, dt)
   call Timers_stop("Grid_updateRefinement")
   endif
 
-  ! Compute inflow volume ratio: (Not computed on NOT_BOUNDARY, NEUMANN_INS, OUTFLOW_INS)
-  call ins_computeQinout( blockCount, blockList, .true., ins_Qin)  ! Shizhao
-
   ! Compute DivUstar - delta_mass and print to screen, add to ins_Qin:
-  call ins_UstarStats( blockCount, blockList, .true., .true.)
+  call ins_UstarStats(.true., .true.)
 
   ! Compute outflow mass volume ratio: (computed on NEUMANN_INS, OUTFLOW_INS)
-  call ins_computeQinout( blockCount, blockList, .false., ins_Qout)
+  call ins_computeQinout(.false., ins_Qout)
   !write(*,*) 'Qout after ref=',ins_Qout
 
   ! Rescale Velocities at outflows for overall conservation:
-  call ins_rescaleVelout(  blockCount, blockList, ins_Qin, ins_Qout)
+  call ins_rescaleVelout(ins_Qin, ins_Qout)
 
   ! DIVERGENCE OF USTAR:
   ! ---------- -- -----

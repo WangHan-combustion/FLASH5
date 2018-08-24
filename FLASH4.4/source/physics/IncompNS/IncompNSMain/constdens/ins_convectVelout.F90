@@ -26,7 +26,7 @@
 !!
 !!***
 
-subroutine ins_convectVelout( blockCount, blockList, convvel)
+subroutine ins_convectVelout(convvel)
 
 #include "Flash.h"
 

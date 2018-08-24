@@ -28,7 +28,7 @@
 !!
 !!***
 
-subroutine ins_rescaleVelout( blockCount, blockList, Qin, Qout)
+subroutine ins_rescaleVelout(Qin, Qout)
 
 #include "Flash.h"
 

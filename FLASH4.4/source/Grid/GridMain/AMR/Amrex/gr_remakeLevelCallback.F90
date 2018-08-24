@@ -90,7 +90,7 @@ subroutine gr_remakeLevelCallback(lev, time, pba, pdm) bind(c)
     use gr_amrexInterface,         ONLY : gr_clearLevelCallback, &
                                           gr_preinterpolationWork, &
                                           gr_postinterpolationWork, &
-                                          gr_fillPhysicalBC
+                                          gr_fillPhysicalBC,gr_fillPhysicalFaceBC
     use gr_physicalMultifabs,      ONLY : unk, &
                                           facevarx, facevary, facevarz, &
                                           gr_scratchCtr, &
