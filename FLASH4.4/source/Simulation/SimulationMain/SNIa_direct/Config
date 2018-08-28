@@ -1,0 +1,61 @@
+REQUIRES Driver
+REQUIRES Grid
+REQUIRES physics/Hydro
+REQUIRES physics/Gravity/GravityMain/Poisson
+REQUIRES physics/Eos/EosMain/Helmholtz
+REQUIRES physics/sourceTerms/Burn/BurnMain/nuclearBurn
+REQUIRES Simulation/SimulationComposition
+REQUIRES Multispecies
+REQUESTS IO
+REQUESTS IO/IOMain/hdf5
+
+
+## Load balancing with burning timesteps
+LINKIF mpi_amr_refine_derefine.F90.pm4 Grid/GridMain/paramesh/paramesh4
+
+#
+# progenitor
+#
+
+DATAFILES       Profiles
+PARAMETER       initialWDFile   STRING  "Profiles/polymesa_m1.025_gamma1.5.dat"
+DATAFILES       *.par
+
+#
+# ignition
+#
+
+D ignite                flag to ignite a spherical region with matchhead
+D x_match               X-coordinate of center of matchhead
+D y_match               Y-coordinate of center of matchhead
+D z_match               Z-coordinate of center of matchhead
+D r_match_inner         Inner radius of spherical matchhead region
+D r_match_outer         Outer radius of spherical matchhead region
+D t_ignite_inner        Temperature of matchhead at r_match_inner
+D t_ignite_outer        Temperature of matchhead at r_match_outer
+PARAMETER     ignite             BOOLEAN  FALSE
+PARAMETER     x_match            REAL     0.e0
+PARAMETER     y_match            REAL     0.e0
+PARAMETER     z_match            REAL     0.e0
+PARAMETER     r_match_inner      REAL     0.e0  [0.0 to ]
+PARAMETER     r_match_outer      REAL     0.e0  [0.0 to ]
+PARAMETER     t_ignite_inner     REAL     4.e9  [0.0 to ]
+PARAMETER     t_ignite_outer     REAL     4.e9  [0.0 to ]
+
+PARAMETER     useShell           BOOLEAN  FALSE
+PARAMETER     radShellMin        REAL     0.e0  [0.0 to ]
+PARAMETER     radShellMax        REAL     0.e0  [0.0 to ]
+PARAMETER     thtShellMin        REAL     0.e0  [0.0 to 180.0]
+PARAMETER     thtShellMax        REAL     0.e0  [0.0 to 180.0]
+PARAMETER     densShellMult      REAL     1.e0  [0.0 to ]
+PARAMETER     tempShellMult      REAL     1.e0  [0.0 to ]
+PARAMETER     xhe4_shell         REAL     1.e0  [0.0 to 1.0]
+PARAMETER     xc12_shell         REAL     0.e0  [0.0 to 1.0]
+PARAMETER     xni56_shell        REAL     0.e0  [0.0 to 1.0]
+
+
+PARAMETER   xc12_fluff    REAL  0.e0 [0.0 to 1.0]
+PARAMETER   xo16_fluff    REAL  0.e0 [0.0 to 1.0]
+PARAMETER   xni56_fluff   REAL  1.e0 [0.0 to 1.0]
+
+VARIABLE        entr    EOSMAP: ENTR
