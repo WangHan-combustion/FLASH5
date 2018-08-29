@@ -18,7 +18,7 @@
 !!  routines directly, like call IO_init or call Grid_init.  This
 !!  routine also makes calls to other Driver initialization routines
 !!  like Driver_initMaterialProperties or Driver_initSourceTerms.
-!!  These routines then call the unit-specific initialization 
+!!  These routines then call the unit-specific initialization
 !!  routines.  This level of abstraction was added to simplify
 !!  the initialization calls.
 !!
@@ -31,7 +31,7 @@
 !! module Driver_data (in file Driver_data.F90. The other variables
 !! are local to the specific routine and do not have the prefix "dr_"
 !!
-!! HISTORY 
+!! HISTORY
 !!
 !!  2008-03-14 KW   Moved material properties initialization up.
 !!
@@ -44,12 +44,12 @@ subroutine Driver_initFlash()
        dr_initialSimTime, dr_elapsedWCTime, &
        dr_initialWCTime, dr_restart, dr_dtInit, dr_redshift,dr_particlesInitialized
 
-  use Driver_interface, ONLY : Driver_initParallel, Driver_init, &
+
+  use Driver_interface, ONLY : Driver_init, &
     Driver_initMaterialProperties, Driver_initSourceTerms, &
     Driver_verifyInitDt, Driver_abortFlash
   use RuntimeParameters_interface, ONLY : RuntimeParameters_init, RuntimeParameters_get
   use Logfile_interface, ONLY : Logfile_init
-  use Flame_interface, ONLY : Flame_init
   use PhysicalConstants_interface, ONLY : PhysicalConstants_init
   use Gravity_interface, ONLY : Gravity_init, &
     Gravity_potentialListOfBlocks
@@ -58,23 +58,28 @@ subroutine Driver_initFlash()
   use Grid_interface, ONLY : Grid_init, Grid_initDomain, &
     Grid_getListOfBlocks
   use Multispecies_interface, ONLY : Multispecies_init
-  use Particles_interface, ONLY : Particles_init,  Particles_initData, &
-       Particles_initForces
+  use Particles_interface, ONLY : Particles_init,  Particles_initData
  
   use Eos_interface, ONLY : Eos_init
   use Hydro_interface, ONLY : Hydro_init
-  use Simulation_interface, ONLY : Simulation_init
-  use Cosmology_interface, ONLY : Cosmology_init
+  use Simulation_interface, ONLY : Simulation_init, Simulation_freeUserArrays
   use IO_interface, ONLY :IO_init, IO_outputInitial
-  use Gravity_interface, ONLY :  Gravity_potentialListOfBlocks
-  implicit none       
-  
+  use ProtonImaging_interface, ONLY : ProtonImaging_init
+  use ProtonEmission_interface, ONLY : ProtonEmission_init
+  use ThomsonScattering_interface, ONLY : ThomsonScattering_init
+  use Profiler_interface, ONLY : Profiler_init
+
+  use IncompNS_interface, ONLY : IncompNS_init
+
+#ifdef FLASH_GRID_AMREXTRANSITION
+  use amrex_base_module, ONLY : amrex_init
+#endif
+
+  implicit none
+
 #include "constants.h"
 #include "Flash.h"
 
-  integer :: blockCount
-  integer :: blockList(MAXBLOCKS)
-  logical :: updateRefine
 
   dr_elapsedWCTime = 0.0
 
@@ -86,7 +91,7 @@ subroutine Driver_initFlash()
   !! hand process ID out to C routines to avoid architecture-dependent code
   call driver_abortflashc_set_mype(dr_globalMe)
 
-  !! make sure our stack (and whatever other rlimits) are big enough.  
+  !! make sure our stack (and whatever other rlimits) are big enough.
   !! this should get around the 2Mb stack limit that pthreads
   !! imposes if linked statically (but not dynamically!)
   call dr_set_rlimits(dr_globalMe)
@@ -96,12 +101,18 @@ subroutine Driver_initFlash()
   call RuntimeParameters_init(  dr_restart)
   call Driver_setupParallelEnv()
 
+#ifdef FLASH_GRID_AMREXTRANSITION
+  call amrex_init(dr_globalComm,.FALSE.) !DEV: Should use dr_meshComm !?
+#endif
+
+
   !! Initialize the code timers.  Ideally should be first thing in
   !! code but currently the timing package
   !! uses MPI_WTime(), so Driver_initParallel() must go first, and
   !! uses RuntimeParameters_get(), so RuntimeParameters_init() must go
   !! first.
-  call Timers_init(  dr_initialWCTime)
+  call Profiler_init()
+  call Timers_init(dr_initialWCTime)
   call Timers_start("initialization")
 
 
@@ -118,8 +129,6 @@ subroutine Driver_initFlash()
   
   call Driver_initMaterialProperties( )
   if(dr_globalMe==MASTER_PE)print*,'MaterialProperties initialized'
-  
-  call Flame_init()
 
   call RuntimeParameters_get('dtInit',dr_dtInit)
 
@@ -129,10 +138,8 @@ subroutine Driver_initFlash()
   if(dr_globalMe==MASTER_PE)print*,'Particles initialized'
 #endif
 
-  if(.not. dr_restart) then     
-     
-     call Cosmology_init( dr_restart)
-     if(dr_globalMe==MASTER_PE)print*,'Cosmology initialized'
+  if(.not. dr_restart) then
+
 
      call Driver_init()
 
@@ -153,10 +160,8 @@ subroutine Driver_initFlash()
      call IO_init( )
 
   else if(dr_restart) then
-     
-     call IO_init( )
 
-     call Cosmology_init( dr_restart)
+     call IO_init( )
 
      call Driver_init()
 
@@ -169,15 +174,22 @@ subroutine Driver_initFlash()
      dr_particlesInitialized=.true.
      call Grid_initDomain( dr_restart,dr_particlesInitialized)
      if (dr_globalMe==MASTER_PE) print *, ' Finished with Grid_initDomain, restart'
-     
+
   end if
 
+  call ProtonImaging_init()
+  call ProtonEmission_init()
+  call ThomsonScattering_init()
+
   !Hydro_init must go before Driver
-  if(dr_globalMe==MASTER_PE) print *, 'Ready to call Hydro_init' 
+  if(dr_globalMe==MASTER_PE) print *, 'Ready to call Hydro_init'
   call Hydro_init()           ! Hydrodynamics, MHD, RHD
   if(dr_globalMe==MASTER_PE)print*,'Hydro initialized'
-  
-  
+
+  ! INS init must go before Driver
+  call IncompNS_init(dr_restart)
+
+
   call Gravity_init()         ! Gravity
   if(dr_globalMe==MASTER_PE)print*,'Gravity initialized'
 
@@ -185,10 +197,12 @@ subroutine Driver_initFlash()
   call Driver_verifyInitDt()
   if(dr_globalMe==MASTER_PE)print*,'Initial dt verified'
  
-  !For active particle simulations we must initialize particle 
+  !For active particle simulations we must initialize particle
   !positions before the call to Gravity_potentialListOfBlocks.
   call Particles_initData(dr_restart,dr_particlesInitialized)
-  
+
+  call Simulation_freeUserArrays()
+
   call IO_outputInitial( dr_nbegin, dr_initialSimTime)
   if(dr_globalMe==MASTER_PE)print*,'Initial plotfile written'
 

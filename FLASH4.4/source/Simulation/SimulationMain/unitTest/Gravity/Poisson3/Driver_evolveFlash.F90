@@ -129,8 +129,7 @@ subroutine Driver_evolveFlash()
 #ifdef DEBUG_DRIVER
      print*,'going into hydro'
 #endif
-     call Hydro(blockCount, blockList, &
-                dr_simTime, dr_dt, dr_dtOld, SWEEP_XYZ)
+     call Hydro(dr_simTime, dr_dt, dr_dtOld, SWEEP_XYZ)
 
      call Timers_stop("hydro")
 
@@ -159,8 +158,7 @@ subroutine Driver_evolveFlash()
 
      dr_simTime = dr_simTime + dr_dt
      call Timers_start("hydro")
-     call Hydro( blockCount, blockList, &
-                dr_simTime, dr_dt, dr_dtOld, SWEEP_ZYX)
+     call Hydro( dr_simTime, dr_dt, dr_dtOld, SWEEP_ZYX)
      call Timers_stop("hydro")
 
 
