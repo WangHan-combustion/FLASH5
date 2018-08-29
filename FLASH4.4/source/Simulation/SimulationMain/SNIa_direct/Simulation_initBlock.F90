@@ -4,7 +4,7 @@
 !! This initializes the white dwarf and flame for Type Ia simulation
 !!
 
-subroutine Simulation_initBlock(blockID, myPE)
+subroutine Simulation_initBlock(solnData, block)
   
   use Simulation_data
   use sim_local_interface, ONLY : sim_interpolate1dWd
@@ -15,6 +15,7 @@ subroutine Simulation_initBlock(blockID, myPE)
     Grid_getBlkBoundBox, Grid_getDeltas, Grid_putPointData, &
     Grid_getCellCoords, Grid_getBlkBoundBox
   use Eos_interface, ONLY : Eos
+  use block_metadata, ONLY : block_metadata_t
   implicit none
 
 #include "constants.h"
@@ -22,9 +23,10 @@ subroutine Simulation_initBlock(blockID, myPE)
 #include "Eos.h"
 #include "Multispecies.h"
   
-  integer, intent(in) :: blockID
-  integer, intent(in) :: myPE
+  real,dimension(:,:,:,:),pointer :: solnData
+  type(block_metadata_t), intent(in) :: block
 
+  integer :: blockID
   logical, parameter :: useGuardCell = .true.
   integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
   integer :: iSizeGC, jSizeGC, kSizeGC
@@ -44,10 +46,11 @@ subroutine Simulation_initBlock(blockID, myPE)
   real :: xhe4initial, xc12initial, xo16initial
   real :: ytot, atot, ztot, abar, zbar
   real :: velx, vely, velz, dens, temp, pres, eint, etot, gamc, game
-  integer :: i, j, k, n
+  integer :: i, j, k, n, level
 
 !==============================================================================
 
+  blockID = block%Id
   call Grid_getGeometry(meshGeom)
 
   ! Get the indices of the blocks
@@ -65,7 +68,7 @@ subroutine Simulation_initBlock(blockID, myPE)
   allocate(zLeft(kSizeGC))
   allocate(zRight(kSizeGC))
 
-  call Grid_getDeltas(blockID, delta)
+  call Grid_getDeltas(block%level, delta)
   dx = delta(IAXIS)
   dy = delta(JAXIS)
   dz = delta(KAXIS)
@@ -211,7 +214,7 @@ subroutine Simulation_initBlock(blockID, myPE)
 
            ! Giant traffic cone
            if ( dens < sim_smallrho .or. temp < sim_smallt) then
-              write(*,'(2(a,i5),a,3i3)') '[Before EOS] Bad value(s) on PE=',myPE,', blockID=',blockID,', (i,j,k)=',i,j,k
+!               write(*,'(2(a,i5),a,3i3)') '[Before EOS] Bad value(s) on PE=',myPE,', blockID=',blockID,', (i,j,k)=',i,j,k
               write(*,'(a,2es15.7)') '  radCenter, thtCenter = ', radCenter, thtCenter
               write(*,'(a,2es15.7)') '     radMin,    radMax = ', radMin, radMax
               write(*,'(a,1es15.7)') '          radCenterVol = ', radCenterVol
@@ -245,7 +248,7 @@ subroutine Simulation_initBlock(blockID, myPE)
            
            ! Giant traffic cone
            if ( dens < sim_smallrho .or. temp < sim_smallt .or. pres < sim_smallp .or. eint < sim_smalle ) then
-              write(*,'(2(a,i5),a,3i3)') '[After EOS] Bad value(s) on PE=',myPE,', blockID=',blockID,', (i,j,k)=',i,j,k
+!               write(*,'(2(a,i5),a,3i3)') '[After EOS] Bad value(s) on PE=',myPE,', blockID=',blockID,', (i,j,k)=',i,j,k
               write(*,'(a,2es15.7)') '  radCenter, thtCenter = ', radCenter, thtCenter
               write(*,'(a,2es15.7)') '     radMin,    radMax = ', radMin, radMax
               write(*,'(a,1es15.7)') '          radCenterVol = ', radCenterVol
