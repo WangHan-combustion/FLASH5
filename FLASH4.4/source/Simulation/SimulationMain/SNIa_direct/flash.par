@@ -1,110 +1,119 @@
 
 ##### Driver/DriverMain #####
 
-dtinit = 0.0093 # [1.E-10]
-dtmax = 8.e-4 # [1.E5]
-dtmin = 1.e-10 # [1.E-10]
-nend = 12312312 # [100]
-restart = .false.
-tmax = 5.0 # [0.2]
-tstep_change_factor = 1.2e0 # [2.0]
-wall_clock_time_limit = 43100 # [604800.]
+dtinit                = 3.000000E-04 # 1.000000E-10 
+dtmax                 = 8.000000E-03 # 100000 
+nend                  = 1000000 # 100 
+restart               = .false. # .false. 
+tmax                  = 1 # 2.000000E-01 
+tstep_change_factor   = 1.200000E+00 # 2 
+wall_clock_time_limit = 42600 # 604800 
 
 ##### Grid/GridMain #####
 
-eosMode = "dens_temp" # ["dens_ie"]
-eosModeInit = "dens_temp" # ["dens_ie"]
-geometry = "spherical" # ["cartesian"]
-reduceGcellFills = .false. # [FALSE]
-smalle = 1.e-100 # [1.E-10]
-smallx = 1.e-100 # [1.E-10]
-xl_boundary_type = "reflect" # ["periodic"]
-xmax = 210.0e8 # [1.]
-xmin = 0.e5 # [0.]
-ymin = -105.e8
-ymax = 105.e8
-xr_boundary_type = "diode" # ["periodic"]
-yl_boundary_type = "diode" # ["periodic"]
-yr_boundary_type = "diode" # ["periodic"]
+geometry         = "cartesian" # "cartesian" 
+smalle           = 10 # 1.000000E-10 
+smallx           = 1.000000E-100 # 1.000000E-10 
+xl_boundary_type = "outflow" # "periodic" 
+xmax             = 3.000000E+09 # 1 
+xmin             = -3.000000E+09 # 0 
+xr_boundary_type = "outflow" # "periodic" 
+yl_boundary_type = "outflow" # "periodic" 
+ymax             = 3.000000E+09 # 1 
+ymin             = -3.000000E+09 # 0 
+yr_boundary_type = "outflow" # "periodic" 
+zl_boundary_type = "outflow" # "periodic" 
+zmax             = 3.000000E+09 # 1 
+zmin             = -3.000000E+09 # 0 
+zr_boundary_type = "outflow" # "periodic" 
 
 ##### Grid/GridMain/paramesh #####
 
-derefine_cutoff_1 = 0.0375 # [0.2]
-lrefine_max = 12 # [1]
-lrefine_min = 1 # [1]
-nblockx = 4 # [1]
-nblocky = 4 # [1]
-refine_cutoff_1 = 0.7 # [0.8]
-refine_var_1 = "dens" # ["none"]
-refine_var_count = 1 # [4]
+derefine_cutoff_1 = 2.000000E-01 # 2.000000E-01 
+derefine_cutoff_2 = 2.000000E-01 # 2.000000E-01 
+derefine_cutoff_3 = 2.000000E-01 # 2.000000E-01 
+lrefine_max       = 3 #6 # 1 
+nblockx           = 2 #8 # 1 
+nblocky           = 2 #8 # 1 
+nblockz           = 2 #8 # 1 
+refine_cutoff_1   = 7.000000E-01 # 8.000000E-01 
+refine_cutoff_2   = 7.000000E-01 # 8.000000E-01 
+refine_cutoff_3   = 7.000000E-01 # 8.000000E-01 
+refine_var_1      = "dens" # "none" 
+refine_var_2      = "pres" # "none" 
+refine_var_3      = "enuc" # "none" 
+refine_var_count  = 3 # 4 
 
 ##### Grid/GridMain/paramesh/paramesh4 #####
 
-enableMaskedGCFill = .false. # [FALSE]
-gr_sanitizeVerbosity = 0
-gr_sanitizeDataMode = 0
+gr_sanitizeDataMode  = 0 # 1 
+gr_sanitizeVerbosity = 0 # 5 
 
 ##### Grid/GridSolvers/Multipole #####
 
-mpole_lmax = 7 # [0]
+mpole_lmax = 8 # 0 
 
 ##### IO/IOMain #####
 
-checkpointFileIntervalTime = 0.01 # [1.]
-checkpointFileNumber = 0
-output_directory = "../otp/" # [""]
-plotFileIntervalTime = 0 # [1.]
-plot_var_1 = "dens" # ["none"]
-plot_var_2 = "temp" # ["none"]
-plot_var_3 = "pres" # ["none"]
-plot_var_4 = "enuc" # ["none"]
-stats_file = "../otp/stats.dat" # ["flash.dat"]
+checkpointFileIntervalTime = 1.e-03 
+checkpointFileNumber       = 0 # 0 
+output_directory           = "./" # "" 
+stats_file                 = "./stats.dat" # "flash.dat" 
+
+# use only plot files (smaller)
+# plotFileIntervalTime       = 1.000000E-03 # 1 
+# plot_var_1                 = "pres" # "none" 
+# plot_var_10                = "c12" # "none" 
+# plot_var_11                = "o16" # "none" 
+# plot_var_12                = "ne20" # "none" 
+# plot_var_13                = "mg24" # "none" 
+# plot_var_14                = "si28" # "none" 
+# plot_var_15                = "s32" # "none" 
+# plot_var_16                = "ar36" # "none" 
+# plot_var_17                = "ca40" # "none" 
+# plot_var_18                = "ti44" # "none" 
+# plot_var_19                = "cr48" # "none" 
+# plot_var_2                 = "dens" # "none" 
+# plot_var_20                = "fe52" # "none" 
+# plot_var_21                = "ni56" # "none" 
+# plot_var_3                 = "temp" # "none" 
+# plot_var_4                 = "enuc" # "none" 
+# plot_var_5                 = "velx" # "none" 
+# plot_var_6                 = "vely" # "none" 
+# plot_var_7                 = "velz" # "none" 
+# plot_var_8                 = "gamc" # "none" 
+# plot_var_9                 = "he4" # "none" 
 
 ##### Simulation/SimulationMain/SNIa_direct #####
 
-densShellMult = 1.0 # [1.e0]
-ignite = .true. # [FALSE]
-initialWDFile = "Profiles/polymesa_1.025.dat" # ["Profiles/wd_6.0to1.04_fluff.dat"]
-r_match_inner = 6.0e8 # [0.e0]
-r_match_outer = 6.15e8 # [0.e0]
-radShellMax = 5.64280000e+10 # [0.e0]
-radShellMin = 5.64280000e+08 # [0.e0]
-t_ignite_inner = 4.e9 # [4.e9]
-t_ignite_outer = 4.e9 # [4.e9]
-tempShellMult = 1.0 # [1.e0]
-thtShellMax = 180 # [0.e0]
-thtShellMin = 0 # [0.e0]
-useShell = .false. # [FALSE]
-x_match = 0.0e0 # [0.e0]
-xc12_fluff = 0.0e0 # [0.e0]
-xc12_shell = 0.0 # [0.e0]
-xhe4_shell = 1.0 # [1.e0]
-xni56_shell = 0.0 # [0.e0]
-xo16_fluff = 0.0 # [0.e0]
-y_match = 0.0e0 # [0.e0]
-z_match = 0.0 # [0.e0]
+ignite         = .true. # .false. 
+initialWDFile  = "polymesa_m1.025_gamma1.5.dat" #"path-to-profile/profile.dat" 
+r_match_inner  = 0 # 0 
+r_match_outer  = 15000000 # 0 
+t_ignite_outer = 1000000000 # 4.000000E+09 
+x_match        = 0 # 0 
+xc12_fluff     = 0 # 0 
+xni56_fluff    = 0 # 1 
+xo16_fluff     = 0 # 0 
+y_match        = 391000651 # 0 
+z_match        = 0 # 0 
 
 ##### monitors/Logfile/LogfileMain #####
 
-log_file = "../otp/run.log" # ["flash.log"]
-run_comment = "edge lit detonation" # run"]
+log_file    = "sn1a.log" # "../path-to-output/run.log" # "flash.log" 
+run_comment = "Katie Kaboom" # "FLASH 3 run" 
 
-##### physics/Hydro/HydroMain #####
+##### physics/Eos/EosMain/Helmholtz #####
 
-cfl = 0.60e0 # [0.8]
+eos_coulombMult = 1.0 # 1 
 
 ##### physics/Hydro/HydroMain/unsplit #####
 
-small = 1.e-100 # [1.E-10]
-smallp = 1.e15 # [1.E-10]
-smallt = 1.e6 # [1.E-10]
-smallu = 1.e-10 # [1.E-10]
-smlrho = 2.e-4 # [1.E-10]
+small  = 1.000000E-100 # 1.000000E-10 
+smallp = 10000 # 1.000000E-10 
+smallt = 1.000000E-10 # 1.000000E-10 
+smlrho = 1.000000E-10 # 1.000000E-10 
 
 ##### physics/sourceTerms/Burn #####
 
-useBurn = .true. # [FALSE]
-
-##### physics/sourceTerms/Burn/BurnMain #####
-
-useShockBurn = .false. # [FALSE]
+useBurn = .true. # .false. 
