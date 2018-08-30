@@ -1,0 +1,110 @@
+
+##### Driver/DriverMain #####
+
+dtinit = 0.0093 # [1.E-10]
+dtmax = 8.e-4 # [1.E5]
+dtmin = 1.e-10 # [1.E-10]
+nend = 12312312 # [100]
+restart = .false.
+tmax = 5.0 # [0.2]
+tstep_change_factor = 1.2e0 # [2.0]
+wall_clock_time_limit = 43100 # [604800.]
+
+##### Grid/GridMain #####
+
+eosMode = "dens_temp" # ["dens_ie"]
+eosModeInit = "dens_temp" # ["dens_ie"]
+geometry = "spherical" # ["cartesian"]
+reduceGcellFills = .false. # [FALSE]
+smalle = 1.e-100 # [1.E-10]
+smallx = 1.e-100 # [1.E-10]
+xl_boundary_type = "reflect" # ["periodic"]
+xmax = 210.0e8 # [1.]
+xmin = 0.e5 # [0.]
+ymin = -105.e8
+ymax = 105.e8
+xr_boundary_type = "diode" # ["periodic"]
+yl_boundary_type = "diode" # ["periodic"]
+yr_boundary_type = "diode" # ["periodic"]
+
+##### Grid/GridMain/paramesh #####
+
+derefine_cutoff_1 = 0.0375 # [0.2]
+lrefine_max = 12 # [1]
+lrefine_min = 1 # [1]
+nblockx = 4 # [1]
+nblocky = 4 # [1]
+refine_cutoff_1 = 0.7 # [0.8]
+refine_var_1 = "dens" # ["none"]
+refine_var_count = 1 # [4]
+
+##### Grid/GridMain/paramesh/paramesh4 #####
+
+enableMaskedGCFill = .false. # [FALSE]
+gr_sanitizeVerbosity = 0
+gr_sanitizeDataMode = 0
+
+##### Grid/GridSolvers/Multipole #####
+
+mpole_lmax = 7 # [0]
+
+##### IO/IOMain #####
+
+checkpointFileIntervalTime = 0.01 # [1.]
+checkpointFileNumber = 0
+output_directory = "../otp/" # [""]
+plotFileIntervalTime = 0 # [1.]
+plot_var_1 = "dens" # ["none"]
+plot_var_2 = "temp" # ["none"]
+plot_var_3 = "pres" # ["none"]
+plot_var_4 = "enuc" # ["none"]
+stats_file = "../otp/stats.dat" # ["flash.dat"]
+
+##### Simulation/SimulationMain/SNIa_direct #####
+
+densShellMult = 1.0 # [1.e0]
+ignite = .true. # [FALSE]
+initialWDFile = "Profiles/polymesa_1.025.dat" # ["Profiles/wd_6.0to1.04_fluff.dat"]
+r_match_inner = 6.0e8 # [0.e0]
+r_match_outer = 6.15e8 # [0.e0]
+radShellMax = 5.64280000e+10 # [0.e0]
+radShellMin = 5.64280000e+08 # [0.e0]
+t_ignite_inner = 4.e9 # [4.e9]
+t_ignite_outer = 4.e9 # [4.e9]
+tempShellMult = 1.0 # [1.e0]
+thtShellMax = 180 # [0.e0]
+thtShellMin = 0 # [0.e0]
+useShell = .false. # [FALSE]
+x_match = 0.0e0 # [0.e0]
+xc12_fluff = 0.0e0 # [0.e0]
+xc12_shell = 0.0 # [0.e0]
+xhe4_shell = 1.0 # [1.e0]
+xni56_shell = 0.0 # [0.e0]
+xo16_fluff = 0.0 # [0.e0]
+y_match = 0.0e0 # [0.e0]
+z_match = 0.0 # [0.e0]
+
+##### monitors/Logfile/LogfileMain #####
+
+log_file = "flash.log" #"../otp/run.log" # ["flash.log"]
+run_comment = "edge lit detonation" # run"]
+
+##### physics/Hydro/HydroMain #####
+
+cfl = 0.60e0 # [0.8]
+
+##### physics/Hydro/HydroMain/unsplit #####
+
+small = 1.e-100 # [1.E-10]
+smallp = 1.e15 # [1.E-10]
+smallt = 1.e6 # [1.E-10]
+smallu = 1.e-10 # [1.E-10]
+smlrho = 2.e-4 # [1.E-10]
+
+##### physics/sourceTerms/Burn #####
+
+useBurn = .true. # [FALSE]
+
+##### physics/sourceTerms/Burn/BurnMain #####
+
+useShockBurn = .false. # [FALSE]
