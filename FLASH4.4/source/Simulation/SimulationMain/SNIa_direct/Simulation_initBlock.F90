@@ -26,7 +26,6 @@ subroutine Simulation_initBlock(solnData, block)
   real,dimension(:,:,:,:),pointer :: solnData
   type(block_metadata_t), intent(in) :: block
 
-  integer :: blockID
   logical, parameter :: useGuardCell = .true.
   integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
   integer :: iSizeGC, jSizeGC, kSizeGC
@@ -50,43 +49,42 @@ subroutine Simulation_initBlock(solnData, block)
 
 !==============================================================================
 
-  blockID = block%Id
   call Grid_getGeometry(meshGeom)
 
   ! Get the indices of the blocks
-  call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+  blkLimits=block%Limits
+  blkLimitsGC=block%LimitsGC
   iSizeGC = blkLimitsGC(HIGH,IAXIS) - blkLimitsGC(LOW,IAXIS) + 1
   jSizeGC = blkLimitsGC(HIGH,JAXIS) - blkLimitsGC(LOW,JAXIS) + 1
   kSizeGC = blkLimitsGC(HIGH,KAXIS) - blkLimitsGC(LOW,KAXIS) + 1
-  allocate(xCenter(iSizeGC))
-  allocate(xLeft(iSizeGC))
-  allocate(xRight(iSizeGC))
-  allocate(yCenter(jSizeGC))
-  allocate(yLeft(jSizeGC))
-  allocate(yRight(jSizeGC))
-  allocate(zCenter(kSizeGC))
-  allocate(zLeft(kSizeGC))
-  allocate(zRight(kSizeGC))
+  allocate(xCenter(blkLimitsGC(LOW,IAXIS):blkLimitsGC(HIGH,IAXIS)))
+  allocate(xLeft(blkLimitsGC(LOW,IAXIS):blkLimitsGC(HIGH,IAXIS)))
+  allocate(xRight(blkLimitsGC(LOW,IAXIS):blkLimitsGC(HIGH,IAXIS)))
+  allocate(yCenter(blkLimitsGC(LOW,JAXIS):blkLimitsGC(HIGH,JAXIS)))
+  allocate(yLeft(blkLimitsGC(LOW,JAXIS):blkLimitsGC(HIGH,JAXIS)))
+  allocate(yRight(blkLimitsGC(LOW,JAXIS):blkLimitsGC(HIGH,JAXIS)))
+  allocate(zCenter(blkLimitsGC(LOW,KAXIS):blkLimitsGC(HIGH,KAXIS)))
+  allocate(zLeft(blkLimitsGC(LOW,KAXIS):blkLimitsGC(HIGH,KAXIS)))
+  allocate(zRight(blkLimitsGC(LOW,KAXIS):blkLimitsGC(HIGH,KAXIS)))
 
   call Grid_getDeltas(block%level, delta)
   dx = delta(IAXIS)
   dy = delta(JAXIS)
   dz = delta(KAXIS)
 
-  call Grid_getCellCoords(IAXIS,blockID,CENTER,    useGuardCell,xCenter,iSizeGC)
-  call Grid_getCellCoords(IAXIS,blockID,LEFT_EDGE, useGuardCell,xLeft,  iSizeGC)
-  call Grid_getCellCoords(IAXIS,blockID,RIGHT_EDGE,useGuardCell,xRight, iSizeGC)
+  call Grid_getCellCoords(IAXIS,block,CENTER,    useGuardCell,xCenter,iSizeGC)
+  call Grid_getCellCoords(IAXIS,block,LEFT_EDGE, useGuardCell,xLeft,  iSizeGC)
+  call Grid_getCellCoords(IAXIS,block,RIGHT_EDGE,useGuardCell,xRight, iSizeGC)
 
-  call Grid_getCellCoords(JAXIS,blockID,CENTER,    useGuardCell,yCenter,jSizeGC)
-  call Grid_getCellCoords(JAXIS,blockID,LEFT_EDGE, useGuardCell,yLeft,  jSizeGC)
-  call Grid_getCellCoords(JAXIS,blockID,RIGHT_EDGE,useGuardCell,yRight, jSizeGC)
+  call Grid_getCellCoords(JAXIS,block,CENTER,    useGuardCell,yCenter,jSizeGC)
+  call Grid_getCellCoords(JAXIS,block,LEFT_EDGE, useGuardCell,yLeft,  jSizeGC)
+  call Grid_getCellCoords(JAXIS,block,RIGHT_EDGE,useGuardCell,yRight, jSizeGC)
 
-  call Grid_getCellCoords(KAXIS,blockID,CENTER,    useGuardCell,zCenter,kSizeGC)
-  call Grid_getCellCoords(KAXIS,blockID,LEFT_EDGE, useGuardCell,zLeft,  kSizeGC)
-  call Grid_getCellCoords(KAXIS,blockID,RIGHT_EDGE,useGuardCell,zRight, kSizeGC)
+  call Grid_getCellCoords(KAXIS,block,CENTER,    useGuardCell,zCenter,kSizeGC)
+  call Grid_getCellCoords(KAXIS,block,LEFT_EDGE, useGuardCell,zLeft,  kSizeGC)
+  call Grid_getCellCoords(KAXIS,block,RIGHT_EDGE,useGuardCell,zRight, kSizeGC)
   
   !call Grid_getBlkBoundBox(blockID, Bspan)
-
   do k = blkLimits(LOW,KAXIS), blkLimits(HIGH,KAXIS)
      do j = blkLimits(LOW,JAXIS), blkLimits(HIGH,JAXIS)
         do i = blkLimits(LOW,IAXIS), blkLimits(HIGH,IAXIS)
@@ -232,10 +230,6 @@ subroutine Simulation_initBlock(solnData, block)
            !-----------------------------------------------
            !  Now store all this info on the grid
            !-----------------------------------------------
-           cell(IAXIS) = i
-           cell(JAXIS) = j
-           cell(KAXIS) = k
-
            velx = 0.0
            vely = 0.0
            velz = 0.0
@@ -262,19 +256,23 @@ subroutine Simulation_initBlock(solnData, block)
            
            
            
+           cell(IAXIS) = i-blkLimits(LOW,IAXIS)+1
+           cell(JAXIS) = j-blkLimits(LOW,JAXIS)+1
+           cell(KAXIS) = k-blkLimits(LOW,KAXIS)+1
+
            ! change state to eosData below
-           call Grid_putPointData(blockID, CENTER, VELX_VAR, EXTERIOR, cell, velx)
-           call Grid_putPointData(blockID, CENTER, VELY_VAR, EXTERIOR, cell, vely)
-           call Grid_putPointData(blockID, CENTER, VELZ_VAR, EXTERIOR, cell, velz)
-           call Grid_putPointData(blockID, CENTER, DENS_VAR, EXTERIOR, cell, dens)
-           call Grid_putPointData(blockID, CENTER, TEMP_VAR, EXTERIOR, cell, temp)
-           call Grid_putPointData(blockID, CENTER, PRES_VAR, EXTERIOR, cell, pres)
-           call Grid_putPointData(blockID, CENTER, EINT_VAR, EXTERIOR, cell, eint)
-           call Grid_putPointData(blockID, CENTER, ENER_VAR, EXTERIOR, cell, etot)
-           call Grid_putPointData(blockID, CENTER, GAMC_VAR, EXTERIOR, cell, gamc)
-           call Grid_putPointData(blockID, CENTER, GAME_VAR, EXTERIOR, cell, game)
+           call Grid_putPointData(block, CENTER, VELX_VAR, INTERIOR, cell, velx)
+           call Grid_putPointData(block, CENTER, VELY_VAR, INTERIOR, cell, vely)
+           call Grid_putPointData(block, CENTER, VELZ_VAR, INTERIOR, cell, velz)
+           call Grid_putPointData(block, CENTER, DENS_VAR, INTERIOR, cell, dens)
+           call Grid_putPointData(block, CENTER, TEMP_VAR, INTERIOR, cell, temp)
+           call Grid_putPointData(block, CENTER, PRES_VAR, INTERIOR, cell, pres)
+           call Grid_putPointData(block, CENTER, EINT_VAR, INTERIOR, cell, eint)
+           call Grid_putPointData(block, CENTER, ENER_VAR, INTERIOR, cell, etot)
+           call Grid_putPointData(block, CENTER, GAMC_VAR, INTERIOR, cell, gamc)
+           call Grid_putPointData(block, CENTER, GAME_VAR, INTERIOR, cell, game)
            do n = SPECIES_BEGIN, SPECIES_END
-              call Grid_putPointData(blockID, CENTER, n, EXTERIOR, cell, massFraction(n))
+              call Grid_putPointData(block, CENTER, n, INTERIOR, cell, massFraction(n))
            end do
         end do
      end do
