@@ -74,6 +74,7 @@ Module xnet_interface
 
   Interface full_net
     Subroutine full_net(kstep)
+      Integer, Intent(in) :: kstep
     End Subroutine full_net
   End Interface
 
