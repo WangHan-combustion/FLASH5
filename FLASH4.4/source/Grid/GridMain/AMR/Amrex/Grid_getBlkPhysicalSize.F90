@@ -71,3 +71,19 @@ subroutine Grid_getBlkPhysicalSize(block, blockSize)
   blockSize(1:NDIM) = (hi(1:NDIM) - lo(1:NDIM) + 1) * dx(1:NDIM)
   end associate
 end subroutine Grid_getBlkPhysicalSize
+
+subroutine Grid_getBlkPhysicalSize_blkId(blockID, blockSize)
+
+  use Driver_interface, ONLY : Driver_abortFlash
+
+  implicit none
+
+#include "constants.h"
+
+  integer,intent(in) :: blockId
+  real,dimension(MDIM),intent(out) :: blockSize
+
+  CALL Driver_abortFlash("[Grid_getBlkPhysicalSize] AMReX does *not* deal in block IDs")
+
+  return
+end subroutine Grid_getBlkPhysicalSize_blkId
