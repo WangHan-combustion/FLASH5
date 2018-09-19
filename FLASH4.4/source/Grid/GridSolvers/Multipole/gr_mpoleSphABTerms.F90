@@ -24,21 +24,22 @@
 
 !!REORDER(4): solnData
 
-subroutine gr_mpoleSphABTerms (blockID)
+subroutine gr_mpoleSphABTerms (blockDesc)
 
   use gr_mpoleData, ONLY : G_2DSPHERICAL,&
                          gbnd, xmin, lstep, Moment, dsinv, r2, yzn, xzn,&
                          pint, pleg, mpole_lmax
 
   use Grid_interface, ONLY : Grid_getCellCoords, &
-    Grid_getBlkIndexLimits, Grid_getBlkPtr, Grid_releaseBlkPtr
+    Grid_getBlkPtr, Grid_releaseBlkPtr
+  use block_metadata, ONLY : block_metadata_t
   
 #include "constants.h"
 #include "Flash.h"
 
   implicit none
   
-  integer, intent(in) :: blockID
+  type(block_metadata_t), intent(in) :: blockDesc
   integer,dimension(LOW:HIGH,MDIM):: blkLimits,blkLimitsGC
   integer   :: i, j, k,l,k2
   integer :: m, isize, jsize
@@ -49,12 +50,13 @@ subroutine gr_mpoleSphABTerms (blockID)
 !------------------------------------------------------------------------
 
   ! interface coordinates
-  call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+  blkLimits = blockDesc%limits
+  blkLimitsGC = blockDesc%limitsGC
   isize = blkLimitsGC(HIGH,IAXIS)-blkLimitsGC(LOW,IAXIS)+1
   jsize = blkLimitsGC(HIGH,JAXIS)-blkLimitsGC(LOW,JAXIS)+1
  
-  call Grid_getCellCoords(IAXIS, blockID, RIGHT_EDGE, .true., xzn, isize)
-  call Grid_getCellCoords(JAXIS, blockID, RIGHT_EDGE, .true., yzn, jsize)
+  call Grid_getCellCoords(IAXIS, blockDesc, RIGHT_EDGE, .true., xzn, isize)
+  call Grid_getCellCoords(JAXIS, blockDesc, RIGHT_EDGE, .true., yzn, jsize)
 
 
 ! generate Legendre polynomials
@@ -101,7 +103,7 @@ subroutine gr_mpoleSphABTerms (blockID)
 !-------------------------------------------------------
 
 
-  call Grid_getBlkPtr(blockID,solnData,CENTER)
+  call Grid_getBlkPtr(blockDesc,solnData,CENTER)
   ! identify the innermost zone of global grid
   
   i = blkLimits(LOW,IAXIS)
@@ -169,8 +171,5 @@ subroutine gr_mpoleSphABTerms (blockID)
      end do ! i
 
   end do ! l
-  call Grid_releaseBlkPtr(blockID,solnData)
+  call Grid_releaseBlkPtr(blockDesc,solnData)
 end subroutine gr_mpoleSphABTerms
-
-
-

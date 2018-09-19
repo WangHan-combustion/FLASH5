@@ -21,21 +21,22 @@
 
 !!REORDER(4): solnData
 
-subroutine gr_mpoleSphBlkPotential(blockID)
+subroutine gr_mpoleSphBlkPotential(blockDesc)
   
   use gr_mpoleData, ONLY : point_mass, point_mass_rsoft, gpot, twopi,newton,&
                          gbnd, xmin, lstep, Moment, dsinv, yzn, xzn,&
                          pint, pleg, mpole_lmax
 
   use Grid_interface, ONLY : Grid_getBlkPtr, Grid_releaseBlkPtr, &
-    Grid_getBlkIndexLimits, Grid_getCellCoords
+    Grid_getCellCoords
+  use block_metadata, ONLY : block_metadata_t
 
 #include "constants.h"
 #include "Flash.h"
 
   implicit none
   
-  integer,intent(IN) :: blockID
+  type(block_metadata_t), intent(in) :: blockDesc
   
   integer   :: i, j, k, l, k2, i_i
   integer :: isize,jsize
@@ -49,12 +50,13 @@ subroutine gr_mpoleSphBlkPotential(blockID)
   gfac = float(lstep)*twopi*Newton
 
 ! interface coordinates
-  call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+  blkLimits = blockDesc%limits
+  blkLimitsGC = blockDesc%limitsGC
   isize = blkLimitsGC(HIGH,IAXIS)-blkLimitsGC(LOW,IAXIS)+1
   jsize = blkLimitsGC(HIGH,JAXIS)-blkLimitsGC(LOW,JAXIS)+1
  
-  call Grid_getCellCoords(IAXIS, blockID, RIGHT_EDGE, .true., xzn, isize)
-  call Grid_getCellCoords(JAXIS, blockID, RIGHT_EDGE, .true., yzn, jsize)
+  call Grid_getCellCoords(IAXIS, blockDesc, RIGHT_EDGE, .true., xzn, isize)
+  call Grid_getCellCoords(JAXIS, blockDesc, RIGHT_EDGE, .true., yzn, jsize)
 
 
 ! generate Legendre polynomials
@@ -138,7 +140,7 @@ subroutine gr_mpoleSphBlkPotential(blockID)
   end if
 
 ! interpolate from the interfaces to the zone centers
-  call Grid_getBlkPtr(blockID,solnData,CENTER)
+  call Grid_getBlkPtr(blockDesc,solnData,CENTER)
   do j = blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS)
      do i = blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS)
         solnData(GPOT_VAR,i,j,1) = 0.25e0                             &
@@ -146,7 +148,7 @@ subroutine gr_mpoleSphBlkPotential(blockID)
              +gpot(i-1,j  ,1)+gpot(i,j  ,1))
      end do
   end do
-  call Grid_releaseBlkPtr(blockID,solnData)
+  call Grid_releaseBlkPtr(blockDesc,solnData)
 
   return
 end subroutine gr_mpoleSphBlkPotential

@@ -42,10 +42,12 @@ subroutine gr_mpolePotential (idensvar, ipotvar, poisfact)
                          G_2DSPHERICAL,& 
                          Xcm,Ycm,Zcm,mpole_subSample,mpole_subSampleInv, fourpi_inv, &
                          point_mass, Newton
-  use Grid_interface, ONLY : Grid_getListOfBlocks, &
-    Grid_getBlkBoundBox, Grid_getDeltas, &
-    Grid_getBlkPtr, Grid_getBlkIndexLimits, Grid_releaseBlkPtr
+  use Grid_interface, ONLY : Grid_getBlkBoundBox, Grid_getDeltas, &
+    Grid_getBlkPtr, Grid_releaseBlkPtr, &
+    Grid_getLeafIterator, Grid_releaseLeafIterator
   use Grid_data, ONLY : gr_meshComm
+  use leaf_iterator, ONLY : leaf_iterator_t
+  use block_metadata, ONLY : block_metadata_t
 
   implicit none
 
@@ -76,12 +78,13 @@ subroutine gr_mpolePotential (idensvar, ipotvar, poisfact)
 
   real :: gbnd1
 
+  type(leaf_iterator_t) :: itor
+  type(block_metadata_t) :: blockDesc
+
   
 
   !=========================================================================
   
-  call Grid_getListOfBlocks(LEAF, blockList, blockCount)
-     
   if(mpole_geometry /= G_2DSPHERICAL) then
 
      !Scale the Poisson source term factor appropriately.
@@ -89,13 +92,13 @@ subroutine gr_mpolePotential (idensvar, ipotvar, poisfact)
      mpfactor = poisfact * fourpi_inv
 
      !Compute potential on all locally held blocks.
-
-
-     do lb = 1, blockCount
+     call Grid_getLeafIterator(itor)
+     do while (itor%is_valid())
+        call itor%blkMetaData(blockDesc)
 
         !get index size of blk (used to be nxb, nyb, nzb)
-        call Grid_getDeltas(blockList(lb),delta)
-        call Grid_getBlkBoundBox(blockList(lb),bndBox)
+        call Grid_getDeltas(blockDesc%level,delta)
+        call Grid_getBlkBoundBox(blockDesc,bndBox)
 
         delx = delta(IAXIS)
         dely = delta(JAXIS)
@@ -107,10 +110,11 @@ subroutine gr_mpolePotential (idensvar, ipotvar, poisfact)
 
         ! Get pointer to solution data.
 
-        call Grid_getBlkPtr(blockList(lb), solnData)
+        call Grid_getBlkPtr(blockDesc, solnData)
 
         !get limits of blk.. this is compatible with blk sizes not fixed at compile time
-        call Grid_getBlkIndexLimits(blockList(lb), blkLimits, blkLimitsGC)
+        blkLimits = blockDesc%limits
+        blkLimitsGC = blockDesc%limitsGC
 
         kmax = blkLimits(HIGH,KAXIS)
         kmin = blkLimits(LOW,KAXIS)  
@@ -173,9 +177,11 @@ subroutine gr_mpolePotential (idensvar, ipotvar, poisfact)
            enddo
         enddo
 
-        call Grid_releaseBlkPtr(blockList(lb), solnData)
+        call Grid_releaseBlkPtr(blockDesc, solnData)
 
-     end do
+        call itor%next()
+     enddo
+     call Grid_releaseLeafIterator(itor)
      
   else
      
@@ -183,9 +189,13 @@ subroutine gr_mpolePotential (idensvar, ipotvar, poisfact)
      
      Moment(:,:,1,:,:) = 0.
      
-     do lb = 1, blockCount
-        call gr_mpoleSphABTerms(blockList(lb))
+     call Grid_getLeafIterator(itor)
+     do while (itor%is_valid())
+        call itor%blkMetaData(blockDesc)
+        call gr_mpoleSphABTerms(blockDesc)
+        call itor%next()
      end do
+     call Grid_releaseLeafIterator(itor)
      
      ! sum over global j-index
 
@@ -233,9 +243,13 @@ subroutine gr_mpolePotential (idensvar, ipotvar, poisfact)
      
      ! compute potential for leaf blocks
      
-     do lb = 1, blockCount
-        call gr_mpoleSphBlkPotential(blockList(lb))
+     call Grid_getLeafIterator(itor)
+     do while (itor%is_valid())
+        call itor%blkMetaData(blockDesc)
+        call gr_mpoleSphBlkPotential(blockDesc)
+        call itor%next()
      end do
+     call Grid_releaseLeafIterator(itor)
      
   end if
   

@@ -29,7 +29,7 @@
 
 !!REORDER(4): solnData
 
-subroutine gr_mpoleLocalSum (blockID,nsum,idensvar, lsum)
+subroutine gr_mpoleLocalSum (blockDesc,nsum,idensvar, lsum)
   
   !==================================================================
   
@@ -39,13 +39,15 @@ subroutine gr_mpoleLocalSum (blockID,nsum,idensvar, lsum)
   use Grid_interface, ONLY : Grid_getBlkPtr,Grid_releaseBlkPtr,&
                              Grid_getBlkBoundBox,Grid_getDeltas,&
                              Grid_getBlkIndexLimits
+  use block_metadata, ONLY : block_metadata_t
 
   implicit none
   
 #include "constants.h"
 #include "Flash.h"
 
-  integer,intent(IN) :: blockID, idensvar, nsum
+  type(block_metadata_t), intent(in) :: blockDesc
+  integer,intent(IN) :: idensvar, nsum
   real,intent(INOUT)  :: lsum(nsum)
   
   real,dimension(MDIM) :: delta
@@ -59,11 +61,11 @@ subroutine gr_mpoleLocalSum (blockID,nsum,idensvar, lsum)
   
   !=====================================================================
   
-  call Grid_getBlkBoundBox(blockID, bndBox)
+  call Grid_getBlkBoundBox(blockDesc, bndBox)
 
   ! Compute dimensions of each zone.
-  call Grid_getDeltas(blockID,delta)
-  call Grid_getBlkPtr(blockID, solnData)
+  call Grid_getDeltas(blockDesc%level,delta)
+  call Grid_getBlkPtr(blockDesc, solnData)
 
   
   !               Sum contributions from this block.
@@ -71,7 +73,8 @@ subroutine gr_mpoleLocalSum (blockID,nsum,idensvar, lsum)
   yy = 0.
   zz = 0.
   
-  call Grid_getBlkIndexLimits(blockID, blkLimits, blkLimitsGC)
+  blkLimits = blockDesc%limits
+  blkLimitsGC = blockDesc%limitsGC
 
 
   kmax = blkLimits(HIGH,KAXIS)
@@ -138,7 +141,7 @@ subroutine gr_mpoleLocalSum (blockID,nsum,idensvar, lsum)
   enddo
   
   !==========================================================================
-  call Grid_releaseBlkPtr(blockID, solnData)
+  call Grid_releaseBlkPtr(blockDesc, solnData)
   
   return
 end subroutine gr_mpoleLocalSum

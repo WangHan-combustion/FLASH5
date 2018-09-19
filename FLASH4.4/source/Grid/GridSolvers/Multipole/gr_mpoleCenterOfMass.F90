@@ -30,8 +30,10 @@ subroutine gr_mpoleCenterOfMass (idensvar)
   use Grid_data, ONLY : gr_meshMe, gr_meshComm
   use Driver_interface, ONLY : Driver_abortFlash
   use Logfile_interface, ONLY : Logfile_stamp
-  use Grid_interface, ONLY : Grid_getListOfBlocks
+  use Grid_interface, ONLY : Grid_getLeafIterator, Grid_releaseLeafIterator
   use gr_mpoleData, ONLY : G_2DSPHERICAL, Xcm, Ycm,Zcm,mpole_geometry,Mtot
+  use leaf_iterator, ONLY : leaf_iterator_t
+  use block_metadata, ONLY : block_metadata_t
 
   implicit none
   
@@ -46,9 +48,11 @@ subroutine gr_mpoleCenterOfMass (idensvar)
   ! coordinate w/mpole_sum_local
   real    :: sum(nsum), lsum(nsum)
   
-  integer :: blockCount, blockList(MAXBLOCKS)
   integer :: error, lb
   character(len=124) :: str_buffer
+
+  type(leaf_iterator_t) :: itor
+  type(block_metadata_t) :: blockDesc
   
   !==========================================================================
   
@@ -62,11 +66,13 @@ subroutine gr_mpoleCenterOfMass (idensvar)
      sum  = 0.
      lsum = 0.
 
-     call Grid_getListOfBlocks(LEAF, blockList, blockCount)     
-
-     do lb = 1, blockCount
-        call gr_mpoleLocalSum (blockList(lb), nsum,  idensvar, lsum )
+     call Grid_getLeafIterator(itor)
+     do while (itor%is_valid())
+        call itor%blkMetaData(blockDesc)
+        call gr_mpoleLocalSum (blockDesc, nsum,  idensvar, lsum )
+        call itor%next()
      enddo
+     call Grid_releaseLeafIterator(itor)
      
        !Give all processors a copy of the global sums.
      call MPI_AllReduce (lsum, sum, nsum, FLASH_REAL, & 

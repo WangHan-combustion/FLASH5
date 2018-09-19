@@ -38,12 +38,13 @@ subroutine gr_mpoleMoments (idensvar)
                          leg_fact,Inner,qmax,Even,Odd,mpole_lmax,mpole_mmax,&
                          fourpi,cylfactor,Xcm,Ycm,Zcm, mpole_dumpMoments, &
                          mpole_useMatrixMPI, MomtmpMatrix, mpole_subSample
-  use Grid_interface, ONLY : Grid_getListOfBlocks, &
-                             Grid_getDeltas,Grid_getBlkBoundBox,&
+  use Grid_interface, ONLY : Grid_getDeltas,Grid_getBlkBoundBox,&
                              Grid_getBlkPtr, Grid_releaseBlkPtr,&
-                             Grid_getBlkIndexLimits
+                             Grid_getLeafIterator, Grid_releaseLeafIterator
   use Timers_interface, ONLY:  Timers_start, Timers_stop
   use Grid_data, ONLY : gr_meshComm
+  use leaf_iterator, ONLY : leaf_iterator_t
+  use block_metadata, ONLY : block_metadata_t
   
   implicit none
   
@@ -73,6 +74,9 @@ subroutine gr_mpoleMoments (idensvar)
  real,dimension(LOW:HIGH,MDIM) :: bndBox
  real,dimension(MDIM) :: delta
  real, pointer,dimension(:,:,:,:)      :: solnData
+
+  type(leaf_iterator_t) :: itor
+  type(block_metadata_t) :: blockDesc
  
  
  ! this part is not used with current implementation in 2-D spherical geometry
@@ -84,13 +88,12 @@ subroutine gr_mpoleMoments (idensvar)
     
     Moment(:,:,:,:,:) = 0.e0
     
-    call Grid_getListOfBlocks(LEAF, blockList, blockCount)
-    
-    do lb = 1, blockCount
-       
+    call Grid_getLeafIterator(itor)
+    do while (itor%is_valid())
+       call itor%blkMetaData(blockDesc)
         
-       call Grid_getDeltas(blockList(lb),delta)
-       call Grid_getBlkBoundBox(blockList(lb),bndBox)
+       call Grid_getDeltas(blockDesc%level,delta)
+       call Grid_getBlkBoundBox(blockDesc,bndBox)
        !handle cases if less than 2d or 3d
        delx = delta(IAXIS)
        dely = delta(JAXIS)
@@ -101,10 +104,11 @@ subroutine gr_mpoleMoments (idensvar)
        delzz = delz / real(mpole_subSample)
        
        !Get pointer to solution data.
-       call Grid_getBlkPtr(blockList(lb), solnData)
+       call Grid_getBlkPtr(blockDesc, solnData)
        
        !get limits of blk.. this is compatible with blk sizes not fixed at compile time
-       call Grid_getBlkIndexLimits(blockList(lb), blkLimits, blkLimitsGC)
+       blkLimits = blockDesc%limits
+       blkLimitsGC = blockDesc%limitsGC
        
        kmax = blkLimits(HIGH,KAXIS)
        kmin = blkLimits(LOW,KAXIS)  
@@ -190,9 +194,11 @@ subroutine gr_mpoleMoments (idensvar)
           enddo
        enddo
        
-       call Grid_releaseBlkPtr(blockList(lb), solnData)
+       call Grid_releaseBlkPtr(blockDesc, solnData)
        
+       call itor%next()
     enddo
+    call Grid_releaseLeafIterator(itor)
     
     ! In zone_moments, we only added the contribution of each zone to its
     ! particular radial bin.  Each zone should contribute its inner moment to
