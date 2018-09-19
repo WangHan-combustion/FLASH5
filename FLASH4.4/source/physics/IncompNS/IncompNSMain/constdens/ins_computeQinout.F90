@@ -49,12 +49,11 @@ subroutine ins_computeQinout(inou_flg, Qinout)
 
 
   !! ---- Argument List ----------------------------------
-  integer, INTENT(IN) :: blockCount
-  integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList 
   logical, INTENT(IN) :: inou_flg
   real,    INTENT(OUT) :: Qinout
   !! -----------------------------------------------------
 
+#if 0
   integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
             
   real, pointer, dimension(:,:,:,:) :: facexData,faceyData,facezData
@@ -296,6 +295,8 @@ subroutine ins_computeQinout(inou_flg, Qinout)
    end if
 
  endif  ! Test if there is an OUTFLOW or NEUMANN INS BC
+
+#endif
 
  return
  end subroutine ins_computeQinout

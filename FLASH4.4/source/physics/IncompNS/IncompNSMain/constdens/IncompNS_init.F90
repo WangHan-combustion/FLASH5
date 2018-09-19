@@ -67,7 +67,7 @@ subroutine IncompNS_init(restart)
 
   call RuntimeParameters_get("ins_pressureCorrect",ins_prescorr)
   ins_prescoeff = 0.
-  if (ins_prescorr) ins_prescoeff = 1.
+  !if (ins_prescorr) ins_prescoeff = 1.
 
   call RuntimeParameters_get("ins_velProlongMethod",ins_prol_method)
 

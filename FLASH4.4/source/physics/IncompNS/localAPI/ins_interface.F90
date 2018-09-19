@@ -99,20 +99,14 @@ Module ins_interface
 
   interface
 
-     SUBROUTINE ins_fluxfix(ng,nxc,nyc,nzc,nxi,nyj,nzk,blockCount,&
-                            blockList)
+     SUBROUTINE ins_fluxfix(ng,nxc,nyc,nzc,nxi,nyj,nzk)
      implicit none
-     integer, intent(IN) :: ng,nxc,nyc,nzc,nxi,nyj,nzk, &
-                            blockCount     
-     integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList
+     integer, intent(IN) :: ng,nxc,nyc,nzc,nxi,nyj,nzk
      end SUBROUTINE ins_fluxfix
 
-     SUBROUTINE ins_fluxfix_p(ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar, &
-                              blockCount,blockList)
+     SUBROUTINE ins_fluxfix_p(ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar)
      implicit none
-     integer, intent(in) :: ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar,&
-                            blockCount
-     integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList
+     integer, intent(in) :: ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar
      end SUBROUTINE ins_fluxfix_p
 
   end interface

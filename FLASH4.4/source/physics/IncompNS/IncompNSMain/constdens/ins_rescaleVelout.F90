@@ -47,11 +47,10 @@ subroutine ins_rescaleVelout(Qin, Qout)
 
 
   !! ---- Argument List ----------------------------------
-  integer, INTENT(IN) :: blockCount
-  integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList 
   real,    INTENT(IN) :: Qin, Qout
   !! -----------------------------------------------------
 
+#if 0
   integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
             
   real, pointer, dimension(:,:,:,:) :: facexData,faceyData,facezData
@@ -176,6 +175,6 @@ subroutine ins_rescaleVelout(Qin, Qout)
 
    
  endif ! Test if there is an OUTFLOW or NEUMANN INS BC
-
+#endif
  return
  end subroutine ins_rescaleVelout

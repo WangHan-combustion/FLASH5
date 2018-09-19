@@ -6,16 +6,13 @@
 ! Adapted to Flash 3, Marcos Vanella, September 2007.
 
 
-  SUBROUTINE ins_fluxfix(ng,nxc,nyc,nzc,nxi,nyj,nzk,blockCount,&
-                         blockList)
+  SUBROUTINE ins_fluxfix(ng,nxc,nyc,nzc,nxi,nyj,nzk)
 
-  
   use Grid_interface, ONLY : Grid_getDeltas,         &
                              Grid_getBlkIndexLimits, &
                              Grid_getBlkPtr,         &
                              Grid_releaseBlkPtr,     &
                              Grid_putFluxData,       &
-                             Grid_getFluxData,       &
                              Grid_conserveFluxes
   use IncompNS_data, ONLY : ins_meshMe
 
@@ -25,14 +22,12 @@
 #include "Flash.h"  
 #include "IncompNS.h"
 
-  integer, intent(IN) :: ng,nxc,nyc,nzc,nxi,nyj,nzk, &
-                         blockCount     
-  integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList
-
-
+  integer, intent(IN) :: ng,nxc,nyc,nzc,nxi,nyj,nzk
   integer, dimension(MDIM) :: datasize
   integer, dimension(LOW:HIGH,MDIM) :: blkLimits,blkLimitsGC
-  
+ 
+#if 0 
+ 
   real, pointer, dimension(:,:,:,:) :: facexData,faceyData,facezData
 
   real, dimension(NFLUXES,GRID_IHI_GC,GRID_JHI_GC,GRID_KHI_GC) :: flxint_u
@@ -204,6 +199,7 @@
 #endif
   enddo
 
+#endif
 
   return
 
@@ -215,15 +211,13 @@ END SUBROUTINE ins_fluxfix
 ! of different refinement levels as defined by the pressure
 ! gradient.
 
-  SUBROUTINE ins_fluxfix_p(ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar,&
-                         blockCount,blockList)
+  SUBROUTINE ins_fluxfix_p(ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar)
 
   use Grid_interface, ONLY : Grid_getDeltas,         &                             
                              Grid_getBlkIndexLimits, &
                              Grid_getBlkPtr,         &
                              Grid_releaseBlkPtr,     &
                              Grid_putFluxData,       &
-                             Grid_getFluxData,       &
                              Grid_conserveFluxes
 
   implicit none
@@ -232,14 +226,12 @@ END SUBROUTINE ins_fluxfix
 #include "Flash.h"  
 #include "IncompNS.h"
 
-  integer, intent(in) :: ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar,&
-                         blockCount
-  integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList
-
-
+  integer, intent(in) :: ng,nxc,nyc,nzc,nxi,nyj,nzk,pvar
   integer, dimension(MDIM) :: datasize
   integer, dimension(LOW:HIGH,MDIM) :: blkLimits,blkLimitsGC
-  
+ 
+#if 0
+ 
   real, pointer, dimension(:,:,:,:) :: solnData,facexData,faceyData,facezData
 
   real, dimension(NFLUXES,GRID_IHI_GC,GRID_JHI_GC,GRID_KHI_GC) :: flxint_u
@@ -328,6 +320,8 @@ END SUBROUTINE ins_fluxfix
 
   ! fix fluxes at refinement interfaces
   call Grid_conserveFluxes( ALLDIR, level)
+
+#endif
 
   return
 

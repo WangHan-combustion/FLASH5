@@ -42,8 +42,7 @@
 !!
 !!***
 
-subroutine IncompNS( blockCount, blockList, &
-                     timeEndAdv, dt,  dtOld,&
+subroutine IncompNS( timeEndAdv, dt,  dtOld,&
                      sweepOrder)
 
   use ins_interface, ONLY : ins_ab2rk3
@@ -57,9 +56,7 @@ subroutine IncompNS( blockCount, blockList, &
 #include "constants.h"
 #include "Flash.h"
 
-  integer, INTENT(INOUT) :: blockCount
   integer, INTENT(IN) :: sweepOrder
-  integer, INTENT(INOUT) :: blockList(MAXBLOCKS) 
   real,    INTENT(IN) :: timeEndAdv, dt, dtOld
   integer :: x, i
 
@@ -69,7 +66,7 @@ subroutine IncompNS( blockCount, blockList, &
 
   call Timers_start("ins_ab2rk3")
 
-  call ins_ab2rk3(  blockCount, blockList, timeEndAdv, dt)
+  call ins_ab2rk3(timeEndAdv, dt)
 
   call Timers_stop("ins_ab2rk3")
 

@@ -35,6 +35,7 @@
 !!  dt         - timestep
 !!
 !!***
+!--Do not reorder---!!REORDER(4): solnData,facexData,faceyData,facezData
 
 subroutine ins_ab2rk3(timeEndAdv, dt)
 
@@ -50,7 +51,6 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
                              Grid_fillGuardCells,    &
                              Grid_setInterpValsGcell,&
                              Grid_putFluxData,       &
-                             Grid_getFluxData,       &
                              Grid_conserveFluxes,    &
                              Grid_conserveField,     &
                              Grid_updateRefinement,  &
@@ -113,7 +113,7 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
 
   real, pointer, dimension(:,:,:,:) :: solnData, facexData,faceyData,facezData
 
-  integer :: lb,blockID,ii,jj,kk,ierr,i,j,k
+  integer :: lb,ii,jj,kk,ierr,i,j,k
 
   real, dimension(GRID_IHI_GC+1,GRID_JHI_GC,GRID_KHI_GC) :: newu
   real, dimension(GRID_IHI_GC,GRID_JHI_GC+1,GRID_KHI_GC) :: newv
@@ -163,6 +163,10 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
 
   character(len=6) :: IndNStep
   integer :: NStep
+
+  real,allocatable, dimension(:) ::xCenter,yCenter,zCenter
+  real :: sizeX, sizeY, sizeZ
+  logical :: gcell = .true.
 ! --------------------------------------------------------------------------
 
   CALL SYSTEM_CLOCK(TA(1),count_rate)
@@ -330,42 +334,63 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
   ! --------- --------- -----------
 #if NDIM == 3
   if (ins_isgs .NE. 0) then
-     call Grid_getLeafIterator
-     do lb = 1,blockCount
-        blockID = blockList(lb)
 
+     call Grid_getLeafIterator(itor)
+     do while(itor%is_valid())
+
+        call itor%blkMetaData(block)
+
+        blkLimits   = block%limits
+        blkLimitsGC = block%limitsGC
+ 
         ! Get blocks dx, dy ,dz:
-        call Grid_getDeltas(blockID,del)
+        call Grid_getDeltas(block%level,del)
 
-        ! Get blocks coord and bsize
-        ! Bounding box:
-        call Grid_getBlkBoundBox(blockId,boundBox)
+        call Grid_getBlkBoundBox(block,boundBox)
         bsize(1:NDIM) = boundBox(2,1:NDIM) - boundBox(1,1:NDIM)
 
-        call Grid_getBlkCenterCoords(blockId,coord)
+        allocate(xCenter(blkLimitsGC(LOW, IAXIS):blkLimitsGC(HIGH, IAXIS)))
+        allocate(yCenter(blkLimitsGC(LOW, JAXIS):blkLimitsGC(HIGH, JAXIS)))
+        allocate(zCenter(blkLimitsGC(LOW, KAXIS):blkLimitsGC(HIGH, KAXIS)))
+        xCenter = 0.0
+        yCenter = 0.0
+        zCenter = 0.0
+
+        sizeX = SIZE(xCenter)
+        sizeY = SIZE(yCenter)
+        sizeZ = SIZE(zCenter)
+
+        call Grid_getCellCoords(IAXIS, block, CENTER, gcell, xCenter, sizeX)
+        if (NDIM >= 2) call Grid_getCellCoords(JAXIS, block, CENTER, gcell, yCenter, sizeY)
+        if (NDIM == 3) call Grid_getCellCoords(KAXIS, block, CENTER, gcell, zCenter, sizeZ)
 
         ! Point to blocks center and face vars:
-        call Grid_getBlkPtr(blockID,solnData,CENTER)
-        call Grid_getBlkPtr(blockID,facexData,FACEX)
-        call Grid_getBlkPtr(blockID,faceyData,FACEY)
-        call Grid_getBlkPtr(blockID,facezData,FACEZ)
+        call Grid_getBlkPtr(block,solnData,CENTER)
+        call Grid_getBlkPtr(block,facexData,FACEX)
+        call Grid_getBlkPtr(block,faceyData,FACEY)
+        call Grid_getBlkPtr(block,facezData,FACEZ)
 
         ! calculate turbulent viscosity
-        call ins_vt(ins_isgs,NGUARD,nxc,nyc,nzc,                   &
-                    ins_invRe,del(DIR_X),del(DIR_Y),del(DIR_Z),    &
-                    coord,bsize,                                   &
-                    facexData,&
-                    faceyData,&
-                    facezData,&
-                    solnData)
+        !call ins_vt(ins_isgs,NGUARD,nxc,nyc,nzc,                   &
+        !            ins_invRe,del(DIR_X),del(DIR_Y),del(DIR_Z),    &
+        !            coord,bsize,                                   &
+        !            facexData,&
+        !            faceyData,&
+        !            facezData,&
+        !            solnData)
 
         ! Release pointers:
-        call Grid_releaseBlkPtr(blockID,solnData,CENTER)
-        call Grid_releaseBlkPtr(blockID,facexData,FACEX)
-        call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
-        call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+        call Grid_releaseBlkPtr(block,solnData,CENTER)
+        call Grid_releaseBlkPtr(block,facexData,FACEX)
+        call Grid_releaseBlkPtr(block,faceyData,FACEY)
+        call Grid_releaseBlkPtr(block,facezData,FACEZ)
+
+        deallocate(xCenter,yCenter,zCenter)
+        call itor%next()                
 
      enddo
+     call Grid_releaseLeafIterator(itor)
+
      ! apply BC and fill guardcells for turbulent viscosity
      gcMask = .FALSE.
      gcMask(TVIS_VAR) = .TRUE.                            ! only turbulent viscosity
@@ -382,45 +407,47 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
 
 #if NDIM < 3
   ! just so we can pass a valid argument in the 2D case to subroutines which will then ignore it anyway:
-  allocate(facezData(max(VELC_FACE_VAR,RHDS_FACE_VAR),1,1,1))
+  allocate(facezData(1,1,1,max(VELC_FACE_VAR,RHDS_FACE_VAR)))
 #endif
 
+#if 0
   call Timers_start("RightHandSide_Predictor")
   ! COMPUTE RIGHT HAND SIDE AND PREDICTOR STEP:
   ! ------- ----- ---- ---- --- --------- ----
-  do lb = 1,blockCount
-     blockID = blockList(lb)
+  call Grid_getLeafIterator(itor)
+  do while(itor%is_valid())
+
+     call itor%blkMetaData(block)
+
+     blkLimits   = block%limits
+     blkLimitsGC = block%limitsGC
 
      ! Get blocks dx, dy ,dz:
-     call Grid_getDeltas(blockID,del)
-
-     ! Get Blocks internal limits indexes:
-     call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+     call Grid_getDeltas(block%level,del)
 
      ! Point to blocks center and face vars:
-     call Grid_getBlkPtr(blockID,solnData,CENTER)
-     call Grid_getBlkPtr(blockID,facexData,FACEX)
-     call Grid_getBlkPtr(blockID,faceyData,FACEY)
+     call Grid_getBlkPtr(block,solnData,CENTER)
+     call Grid_getBlkPtr(block,facexData,FACEX)
+     call Grid_getBlkPtr(block,faceyData,FACEY)
 
 #if NDIM == 3
-     call Grid_getBlkPtr(blockID,facezData,FACEZ)
+     call Grid_getBlkPtr(block,facezData,FACEZ)
 
      ! compute RHS of momentum equation
-     call ins_rhs3d (  facexData(VELC_FACE_VAR,:,:,:),            &
-                       faceyData(VELC_FACE_VAR,:,:,:),            &
-                       facezData(VELC_FACE_VAR,:,:,:),            &
-                       solnData(TVIS_VAR,:,:,:),                  &
+     call ins_rhs3d (  facexData(:,:,:,VELC_FACE_VAR),            &
+                       faceyData(:,:,:,VELC_FACE_VAR),            &
+                       facezData(:,:,:,VELC_FACE_VAR),            &
+                       solnData(:,:,:,TVIS_VAR),                  &
                        ins_invRe,                                 &
                        blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS),&
                        blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS),&
                        blkLimits(LOW,KAXIS),blkLimits(HIGH,KAXIS),&
                        del(DIR_X),del(DIR_Y),del(DIR_Z),newu,newv,neww )
-     call Grid_getBlkPtr(blockID,facezData,FACEZ) ! not sure why again... -KW
 
 #elif NDIM ==2
      ! compute RHS of momentum equation
-     call ins_rhs2d(  facexData(VELC_FACE_VAR,:,:,:),            &
-                      faceyData(VELC_FACE_VAR,:,:,:),            &
+     call ins_rhs2d(  facexData(:,:,:,VELC_FACE_VAR),            &
+                      faceyData(:,:,:,VELC_FACE_VAR),            &
                       ins_invRe,                                 &
                       blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS),&
                       blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS),&
@@ -428,14 +455,14 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
 
 #endif
      ! compute intermediate velocities
-     call ins_predictor(facexData(VELC_FACE_VAR,:,:,:),&
-                        faceyData(VELC_FACE_VAR,:,:,:),&
-                        facezData(VELC_FACE_VAR,:,:,:),&
+     call ins_predictor(facexData(:,:,:,VELC_FACE_VAR),&
+                        faceyData(:,:,:,VELC_FACE_VAR),&
+                        facezData(:,:,:,VELC_FACE_VAR),&
                         newu,newv,neww,                &
-                        facexData(RHDS_FACE_VAR,:,:,:),&
-                        faceyData(RHDS_FACE_VAR,:,:,:),&
-                        facezData(RHDS_FACE_VAR,:,:,:),&
-                        solnData(PRES_VAR,:,:,:),      &
+                        facexData(:,:,:,RHDS_FACE_VAR),&
+                        faceyData(:,:,:,RHDS_FACE_VAR),&
+                        facezData(:,:,:,RHDS_FACE_VAR),&
+                        solnData(:,:,:,PRES_VAR),      &
                         dt,del(DIR_X),del(DIR_Y),del(DIR_Z),      &
             blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS),&
             blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS),&
@@ -443,26 +470,27 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
             ins_gama,ins_rhoa,ins_alfa )
 
      ! save RHS for next step
-     facexData(RHDS_FACE_VAR,:,:,:) = newu(:,:,:)
-     faceyData(RHDS_FACE_VAR,:,:,:) = newv(:,:,:)
+     facexData(:,:,:,RHDS_FACE_VAR) = newu(:,:,:)
+     faceyData(:,:,:,RHDS_FACE_VAR) = newv(:,:,:)
 
 
      ! Release pointers:
-     call Grid_releaseBlkPtr(blockID,solnData,CENTER)
-     call Grid_releaseBlkPtr(blockID,facexData,FACEX)
-     call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+     call Grid_releaseBlkPtr(block,solnData,CENTER)
+     call Grid_releaseBlkPtr(block,facexData,FACEX)
+     call Grid_releaseBlkPtr(block,faceyData,FACEY)
 
 
 #if NDIM ==3
-     facezData(RHDS_FACE_VAR,:,:,:) = neww(:,:,:)
-     call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+     facezData(:,:,:,RHDS_FACE_VAR) = neww(:,:,:)
+     call Grid_releaseBlkPtr(block,facezData,FACEZ)
 #endif
 
+     call itor%next()
 
   enddo
-
+  call Grid_releaseLeafIterator(itor)
   call Timers_stop("RightHandSide_Predictor")
-
+#endif
 !!$   !CALL SYSTEM_CLOCK(TA(2),count_rate)
 !!$   !ET=REAL(TA(2)-TA(1))/count_rate
 !!$   !write(*,*) 'Predictor time =',ET
@@ -478,6 +506,7 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
   gcMask(NUNK_VARS+2*NFACE_VARS+VELC_FACE_VAR) = .TRUE.    ! wstar
 #endif
   ins_predcorrflg = .true.
+
   call Grid_fillGuardCells(CENTER_FACES,ALLDIR,&
        maskSize=NUNK_VARS+NDIM*NFACE_VARS,mask=gcMask)
 
@@ -485,15 +514,14 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
   ! --- ------ --- -----
 #ifdef FLASH_GRID_PARAMESH
   ! Fix fluxes at block boundaries
-  call ins_fluxfix(NGUARD,nxc,nyc,nzc,nxc-1,nyc-1,nzc-1,&
-                   blockCount,blockList)
+  call ins_fluxfix(NGUARD,nxc,nyc,nzc,nxc-1,nyc-1,nzc-1)
 #endif
   call Timers_stop("Gcell_IntermVelocs")
 
   if (ist .eq. 1) then
   call Timers_start("Grid_updateRefinement")
-  call Grid_updateRefinement( ins_nstep, timeEndAdv ,gridChanged)
-  call Grid_getListOfBlocks(LEAF,blockList,blockCount)
+  !call Grid_updateRefinement( ins_nstep, timeEndAdv ,gridChanged)
+  !call Grid_getListOfBlocks(LEAF,blockList,blockCount)
   call Timers_stop("Grid_updateRefinement")
   endif
 
@@ -509,53 +537,58 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
 
   ! DIVERGENCE OF USTAR:
   ! ---------- -- -----
-  do lb = 1,blockCount
-     blockID = blockList(lb)
+  call Grid_getLeafIterator(itor)
+  do while(itor%is_valid())
+
+     call itor%blkMetaData(block)
+
+     blkLimits   = block%limits
+     blkLimitsGC = block%limitsGC
 
      ! Get blocks dx, dy ,dz:
-     call Grid_getDeltas(blockID,del)
-
-     ! Get Blocks internal limits indexes:
-     call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
+     call Grid_getDeltas(block%level,del)
 
      ! Point to blocks center and face vars:
-     call Grid_getBlkPtr(blockID,solnData,CENTER)
-     call Grid_getBlkPtr(blockID,facexData,FACEX)
-     call Grid_getBlkPtr(blockID,faceyData,FACEY)
+     call Grid_getBlkPtr(block,solnData,CENTER)
+     call Grid_getBlkPtr(block,facexData,FACEX)
+     call Grid_getBlkPtr(block,faceyData,FACEY)
 
 #if NDIM ==3
-     call Grid_getBlkPtr(blockID,facezData,FACEZ)
+     call Grid_getBlkPtr(block,facezData,FACEZ)
 #endif
 
 
      ! compute divergence of intermediate velocities
-     call ins_divergence(facexData(VELC_FACE_VAR,:,:,:),&
-                         faceyData(VELC_FACE_VAR,:,:,:),&
-                         facezData(VELC_FACE_VAR,:,:,:),&
+     call ins_divergence(facexData(:,:,:,VELC_FACE_VAR),&
+                         faceyData(:,:,:,VELC_FACE_VAR),&
+                         facezData(:,:,:,VELC_FACE_VAR),&
              blkLimits(LOW,IAXIS),blkLimits(HIGH,IAXIS),&
              blkLimits(LOW,JAXIS),blkLimits(HIGH,JAXIS),&
              blkLimits(LOW,KAXIS),blkLimits(HIGH,KAXIS),&
                        del(DIR_X),del(DIR_Y),del(DIR_Z),&
-                       solnData(DUST_VAR,:,:,:) )
+                       solnData(:,:,:,DUST_VAR) )
 
      ! Poisson RHS source vector
-     solnData(DUST_VAR,                                   &
+     solnData(                                   &
           blkLimits(LOW,IAXIS):blkLimits(HIGH,IAXIS),     &
           blkLimits(LOW,JAXIS):blkLimits(HIGH,JAXIS),     &
-          blkLimits(LOW,KAXIS):blkLimits(HIGH,KAXIS)) =   &
-     solnData(DUST_VAR,                                   &
+          blkLimits(LOW,KAXIS):blkLimits(HIGH,KAXIS),DUST_VAR) =   &
+     solnData(                                   &
           blkLimits(LOW,IAXIS):blkLimits(HIGH,IAXIS),     &
           blkLimits(LOW,JAXIS):blkLimits(HIGH,JAXIS),     &
-          blkLimits(LOW,KAXIS):blkLimits(HIGH,KAXIS))/(dt*ins_alfa)
+          blkLimits(LOW,KAXIS):blkLimits(HIGH,KAXIS),DUST_VAR)/(dt*ins_alfa)
 
      ! Release pointers:
-     call Grid_releaseBlkPtr(blockID,solnData,CENTER)
-     call Grid_releaseBlkPtr(blockID,facexData,FACEX)
-     call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+     call Grid_releaseBlkPtr(block,solnData,CENTER)
+     call Grid_releaseBlkPtr(block,facexData,FACEX)
+     call Grid_releaseBlkPtr(block,faceyData,FACEY)
 #if NDIM ==3
-     call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+     call Grid_releaseBlkPtr(block,facezData,FACEZ)
 #endif
+
+     call itor%next()
   enddo
+  call Grid_releaseLeafIterator(itor)
 
 !  call Grid_computeVarMean(DUST_VAR,meanPres)
 !  if (ins_meshMe .eq. MASTER_PE) write(*,*) 'Mean Div Ustar A=',meanPres*(dt*ins_alfa)
@@ -563,9 +596,11 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
   call Timers_start("Grid_solvePoisson")
   ! SOLUTION OF POISSON EQUATION FOR PRESSURE:
   ! -------- -- ------- -------- --- --------
+  if(ins_meshMe .eq. MASTER_PE) print *,"Calling pressure Poisson solver"
   poisfact = 1.0
   call Grid_solvePoisson (DELP_VAR, DUST_VAR, bc_types, bc_values, poisfact)
   call Timers_stop("Grid_solvePoisson")
+  if(ins_meshMe .eq. MASTER_PE) print *,"pressure solve completed"
 
 !  call Grid_computeVarMean(PRES_VAR,meanPres)
 !  if (ins_meshMe .eq. MASTER_PE) write(*,*) 'Mean Pressure=',meanPres
@@ -587,21 +622,24 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
   ! fix fluxes at block boundaries
   ! fix dp gradient fluxes at block boundaries
   call ins_fluxfix_p(NGUARD,nxc,nyc,nzc,nxc-1,nyc-1,nzc-1,&
-                     DELP_VAR,blockCount,blockList)
+                     DELP_VAR)
 #endif
   call Timers_stop("Gcells_DelP")
 
-
+#if 0
   call Timers_start("Corrector")
   ! CORRECTOR STEP:
   ! --------- ---
-  alfadt = ins_alfa*dt
-  do lb = 1,blockCount
+  call Grid_getLeafIterator(itor)
+  do while(itor%is_valid())
 
-     blockID = blockList(lb)
+     call itor%blkMetaData(block)
+
+     blkLimits   = block%limits
+     blkLimitsGC = block%limitsGC
 
      ! Get blocks dx, dy ,dz:
-     call Grid_getDeltas(blockID,del)
+     call Grid_getDeltas(block%level,del)
 
 #if NDIM == 2
      ! Case 2D take depth to be 1:
@@ -613,8 +651,6 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
      dtdxdy = alfadt*(del(DIR_X)*del(DIR_Y))**(-1.)   !(dx*dy)**-1.
 
      ! Get Index Limits:
-     call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
-
      datasize(1:MDIM)=blkLimitsGC(HIGH,1:MDIM)-blkLimitsGC(LOW,1:MDIM)+1
 
      ! Positions in face arrays where flux vars have been stored
@@ -626,53 +662,53 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
      ez = dataSize(DIR_Z)-NGUARD*K3D
 
      ! Point to blocks center and face vars:
-     call Grid_getBlkPtr(blockID,solnData,CENTER)
-     call Grid_getBlkPtr(blockID,facexData,FACEX)
-     call Grid_getBlkPtr(blockID,faceyData,FACEY)
+     call Grid_getBlkPtr(block,solnData,CENTER)
+     call Grid_getBlkPtr(block,facexData,FACEX)
+     call Grid_getBlkPtr(block,faceyData,FACEY)
 
 #if NDIM ==3
-     call Grid_getBlkPtr(blockID,facezData,FACEZ)
+     call Grid_getBlkPtr(block,facezData,FACEZ)
 #endif
 
 #ifdef FLASH_GRID_UG
      ! UNIFORM Grid:
      ! west face
-     facexData(VELC_FACE_VAR,sx,sy:ey,sz:ez) =                  &
-          facexData(VELC_FACE_VAR,sx,sy:ey,sz:ez) -             &
-          alfadt/del(DIR_X)*(solnData(DELP_VAR,sx,sy:ey,sz:ez)- &
-                             solnData(DELP_VAR,sx-1,sy:ey,sz:ez))
+     facexData(sx,sy:ey,sz:ez,VELC_FACE_VAR) =                  &
+          facexData(sx,sy:ey,sz:ez,VELC_FACE_VAR) -             &
+          alfadt/del(DIR_X)*(solnData(sx,sy:ey,sz:ez,DELP_VAR)- &
+                             solnData(sx-1,sy:ey,sz:ez,DELP_VAR))
 
      ! east face
-     facexData(VELC_FACE_VAR,ex+1,sy:ey,sz:ez) =                  &
-          facexData(VELC_FACE_VAR,ex+1,sy:ey,sz:ez) -             &
-          alfadt/del(DIR_X)*(solnData(DELP_VAR,ex+1,sy:ey,sz:ez)- &
-                             solnData(DELP_VAR,ex,sy:ey,sz:ez))
+     facexData(ex+1,sy:ey,sz:ez,VELC_FACE_VAR) =                  &
+          facexData(ex+1,sy:ey,sz:ez,VELC_FACE_VAR) -             &
+          alfadt/del(DIR_X)*(solnData(ex+1,sy:ey,sz:ez,DELP_VAR)- &
+                             solnData(ex,sy:ey,sz:ez,DELP_VAR))
 
      ! south face
-     faceyData(VELC_FACE_VAR,sx:ex,sy,sz:ez) =                  &
-          faceyData(VELC_FACE_VAR,sx:ex,sy,sz:ez) -             &
-          alfadt/del(DIR_Y)*(solnData(DELP_VAR,sx:ex,sy,sz:ez)- &
-                             solnData(DELP_VAR,sx:ex,sy-1,sz:ez))
+     faceyData(sx:ex,sy,sz:ez,VELC_FACE_VAR) =                  &
+          faceyData(sx:ex,sy,sz:ez,VELC_FACE_VAR) -             &
+          alfadt/del(DIR_Y)*(solnData(sx:ex,sy,sz:ez,DELP_VAR)- &
+                             solnData(sx:ex,sy-1,sz:ez,DELP_VAR))
 
      ! north face
-     faceyData(VELC_FACE_VAR,sx:ex,ey+1,sz:ez) =                  &
-          faceyData(VELC_FACE_VAR,sx:ex,ey+1,sz:ez) -             &
-          alfadt/del(DIR_Y)*(solnData(DELP_VAR,sx:ex,ey+1,sz:ez)- &
-                             solnData(DELP_VAR,sx:ex,ey,sz:ez))
+     faceyData(sx:ex,ey+1,sz:ez,VELC_FACE_VAR) =                  &
+          faceyData(sx:ex,ey+1,sz:ez,VELC_FACE_VAR) -             &
+          alfadt/del(DIR_Y)*(solnData(sx:ex,ey+1,sz:ez,DELP_VAR)- &
+                             solnData(sx:ex,ey,sz:ez,DELP_VAR))
 
 
 #if NDIM == 3
      ! front face
-     facezData(VELC_FACE_VAR,sx:ex,sy:ey,sz) =                  &
-          facezData(VELC_FACE_VAR,sx:ex,sy:ey,sz) -             &
-          alfadt/del(DIR_Z)*(solnData(DELP_VAR,sx:ex,sy:ey,sz)- &
-                             solnData(DELP_VAR,sx:ex,sy:ey,sz-1))
+     facezData(sx:ex,sy:ey,sz,VELC_FACE_VAR) =                  &
+          facezData(sx:ex,sy:ey,sz,VELC_FACE_VAR) -             &
+          alfadt/del(DIR_Z)*(solnData(sx:ex,sy:ey,sz,DELP_VAR)- &
+                             solnData(sx:ex,sy:ey,sz-1,DELP_VAR))
 
      ! back face
-     facezData(VELC_FACE_VAR,sx:ex,sy:ey,ez+1) =                  &
-          facezData(VELC_FACE_VAR,sx:ex,sy:ey,ez+1) -             &
-          alfadt/del(DIR_Z)*(solnData(DELP_VAR,sx:ex,sy:ey,ez+1)- &
-                             solnData(DELP_VAR,sx:ex,sy:ey,ez))
+     facezData(sx:ex,sy:ey,ez+1,VELC_FACE_VAR) =                  &
+          facezData(sx:ex,sy:ey,ez+1,VELC_FACE_VAR) -             &
+          alfadt/del(DIR_Z)*(solnData(sx:ex,sy:ey,ez+1,DELP_VAR)- &
+                             solnData(sx:ex,sy:ey,ez,DELP_VAR))
 #endif
 
 #else
@@ -680,50 +716,50 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
      ! AMR GRID:
      ! update block boundary velocities using corrected fluxes
      ! X direction:
-     call Grid_getFluxData(blockID, IAXIS, &
-                           flxint_u, dataSize)
+     !call Grid_getFluxData(block, IAXIS, &
+     !                      flxint_u, dataSize)
 
 
      ! west face
-     facexData(VELC_FACE_VAR,sx,sy:ey,sz:ez) =       &
-          facexData(VELC_FACE_VAR,sx,sy:ey,sz:ez) -  &
-          dtdydz*flxint_u(VELC_FLUX,sx,sy:ey,sz:ez)
+     !facexData(VELC_FACE_VAR,sx,sy:ey,sz:ez) =       &
+     !     facexData(VELC_FACE_VAR,sx,sy:ey,sz:ez) -  &
+     !     dtdydz*flxint_u(VELC_FLUX,sx,sy:ey,sz:ez)
 
      ! east face
-     facexData(VELC_FACE_VAR,ex+1,sy:ey,sz:ez) =       &
-          facexData(VELC_FACE_VAR,ex+1,sy:ey,sz:ez) -  &
-          dtdydz*flxint_u(VELC_FLUX,ex+1,sy:ey,sz:ez)
+     !facexData(VELC_FACE_VAR,ex+1,sy:ey,sz:ez) =       &
+     !     facexData(VELC_FACE_VAR,ex+1,sy:ey,sz:ez) -  &
+     !     dtdydz*flxint_u(VELC_FLUX,ex+1,sy:ey,sz:ez)
 
 
      ! Y direction:
-     call Grid_getFluxData(blockID, JAXIS, &
-                           flxint_v, dataSize)
+     !call Grid_getFluxData(block, JAXIS, &
+     !                      flxint_v, dataSize)
 
      ! south face
-     faceyData(VELC_FACE_VAR,sx:ex,sy,sz:ez) =       &
-          faceyData(VELC_FACE_VAR,sx:ex,sy,sz:ez) -  &
-          dtdxdz*flxint_v(VELC_FLUX,sx:ex,sy,sz:ez)
+     !faceyData(VELC_FACE_VAR,sx:ex,sy,sz:ez) =       &
+     !     faceyData(VELC_FACE_VAR,sx:ex,sy,sz:ez) -  &
+     !     dtdxdz*flxint_v(VELC_FLUX,sx:ex,sy,sz:ez)
 
      ! north face
-     faceyData(VELC_FACE_VAR,sx:ex,ey+1,sz:ez) =       &
-          faceyData(VELC_FACE_VAR,sx:ex,ey+1,sz:ez) -  &
-          dtdxdz*flxint_v(VELC_FLUX,sx:ex,ey+1,sz:ez)
+     !faceyData(VELC_FACE_VAR,sx:ex,ey+1,sz:ez) =       &
+     !     faceyData(VELC_FACE_VAR,sx:ex,ey+1,sz:ez) -  &
+     !     dtdxdz*flxint_v(VELC_FLUX,sx:ex,ey+1,sz:ez)
 
 #if NDIM == 3
 
      ! Z direction:
-     call Grid_getFluxData(blockID, KAXIS, &
-                           flxint_w, dataSize)
+     !call Grid_getFluxData(block, KAXIS, &
+     !                      flxint_w, dataSize)
 
      ! front face
-     facezData(VELC_FACE_VAR,sx:ex,sy:ey,sz) =       &
-          facezData(VELC_FACE_VAR,sx:ex,sy:ey,sz) -  &
-          dtdxdy*flxint_w(VELC_FLUX,sx:ex,sy:ey,sz)
+     !facezData(VELC_FACE_VAR,sx:ex,sy:ey,sz) =       &
+     !     facezData(VELC_FACE_VAR,sx:ex,sy:ey,sz) -  &
+     !     dtdxdy*flxint_w(VELC_FLUX,sx:ex,sy:ey,sz)
 
      ! back face
-     facezData(VELC_FACE_VAR,sx:ex,sy:ey,ez+1) =       &
-          facezData(VELC_FACE_VAR,sx:ex,sy:ey,ez+1) -  &
-          dtdxdy*flxint_w(VELC_FLUX,sx:ex,sy:ey,ez+1)
+     !facezData(VELC_FACE_VAR,sx:ex,sy:ey,ez+1) =       &
+     !     facezData(VELC_FACE_VAR,sx:ex,sy:ey,ez+1) -  &
+     !     dtdxdy*flxint_w(VELC_FLUX,sx:ex,sy:ey,ez+1)
 
 #endif
 
@@ -731,31 +767,34 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
 
 
      ! update divergence-free velocities (not on block boundary)
-     call ins_corrector( facexData(VELC_FACE_VAR,:,:,:),&
-                         faceyData(VELC_FACE_VAR,:,:,:),&
-                         facezData(VELC_FACE_VAR,:,:,:),&
-                         solnData(DELP_VAR,:,:,:),&
+     call ins_corrector( facexData(:,:,:,VELC_FACE_VAR),&
+                         faceyData(:,:,:,VELC_FACE_VAR),&
+                         facezData(:,:,:,VELC_FACE_VAR),&
+                         solnData(:,:,:,DELP_VAR),&
                          sx,ex,sy,ey,sz,ez,&
                          dt,del(DIR_X),del(DIR_Y),del(DIR_Z),ins_alfa)
 
      ! update pressure
-     solnData(PRES_VAR,:,:,:) = ins_prescoeff*solnData(PRES_VAR,:,:,:) + &
-                                solnData(DELP_VAR,:,:,:)
+     solnData(:,:,:,PRES_VAR) = ins_prescoeff*solnData(:,:,:,PRES_VAR) + &
+                                solnData(:,:,:,DELP_VAR)
 
      ! Release pointers:
-     call Grid_releaseBlkPtr(blockID,solnData,CENTER)
-     call Grid_releaseBlkPtr(blockID,facexData,FACEX)
-     call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+     call Grid_releaseBlkPtr(block,solnData,CENTER)
+     call Grid_releaseBlkPtr(block,facexData,FACEX)
+     call Grid_releaseBlkPtr(block,faceyData,FACEY)
 #if NDIM == 3
-     call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+     call Grid_releaseBlkPtr(block,facezData,FACEZ)
 #endif
-
+     call itor%next()
   enddo ! End of corrector loop
+
+  call Grid_releaseLeafIterator(itor)
+
 #if NDIM < 3
   deallocate(facezData)
 #endif
   call Timers_stop("Corrector")
-
+#endif
   call Timers_start("Gcell_FinalVelocsP")
   ! FILL GUARDCELLS FOR FINAL VELOCITIES AND PRESSURE:
   ! ---- ---------- --- ----- ---------- --- --------
@@ -806,82 +845,90 @@ subroutine ins_ab2rk3(timeEndAdv, dt)
   mndivv =  10.**(10.)
   maxu   = mxdivv; maxv = maxu; maxw = maxu; maxp = maxu;
   minu   = mndivv; minv = minu; minw = minu; minp = minu;
-  do lb = 1,blockCount
 
-     blockID = blockList(lb)
+  call Grid_getLeafIterator(itor)
+  do while(itor%is_valid())
+
+     call itor%blkMetaData(block)
+
+     blkLimits   = block%limits
+     blkLimitsGC = block%limitsGC
 
      ! Get blocks dx, dy ,dz:
-     call Grid_getDeltas(blockID,del)
+     call Grid_getDeltas(block%level,del)
 
-     call Grid_getBlkPtr(blockID,solnData,CENTER)
-     call Grid_getBlkPtr(blockID,facexData,FACEX)
-     call Grid_getBlkPtr(blockID,faceyData,FACEY)
+     call Grid_getBlkPtr(block,solnData,CENTER)
+     call Grid_getBlkPtr(block,facexData,FACEX)
+     call Grid_getBlkPtr(block,faceyData,FACEY)
 
 #if NDIM == 3
-     call Grid_getBlkPtr(blockID,facezData,FACEZ)
+     call Grid_getBlkPtr(block,facezData,FACEZ)
 
-  mxdivv = max( mxdivv,maxval( (facexData(VELC_FACE_VAR,NGUARD+2:nxc,NGUARD+1:nyc-1,NGUARD+1:nzc-1) - &
-                    facexData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1))/del(DIR_X) + &
-                   (faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+2:nyc,NGUARD+1:nzc-1) - &
-                    faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1))/del(DIR_Y) + &
-                   (facezData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+2:nzc) - &
-                    facezData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1))/del(DIR_Z) ))
+  mxdivv = max( mxdivv,maxval( (facexData(NGUARD+2:nxc,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR) - &
+                    facexData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR))/del(DIR_X) + &
+                   (faceyData(NGUARD+1:nxc-1,NGUARD+2:nyc,NGUARD+1:nzc-1,VELC_FACE_VAR) - &
+                    faceyData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR))/del(DIR_Y) + &
+                   (facezData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+2:nzc,VELC_FACE_VAR) - &
+                    facezData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR))/del(DIR_Z) ))
 
-  mndivv = min( mndivv,minval( (facexData(VELC_FACE_VAR,NGUARD+2:nxc,NGUARD+1:nyc-1,NGUARD+1:nzc-1) - &
-                    facexData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1))/del(DIR_X) + &
-                   (faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+2:nyc,NGUARD+1:nzc-1) - &
-                    faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1))/del(DIR_Y) + &
-                   (facezData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+2:nzc) - &
-                    facezData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1))/del(DIR_Z) ))
+  mndivv = min( mndivv,minval( (facexData(NGUARD+2:nxc,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR) - &
+                    facexData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR))/del(DIR_X) + &
+                   (faceyData(NGUARD+1:nxc-1,NGUARD+2:nyc,NGUARD+1:nzc-1,VELC_FACE_VAR) - &
+                    faceyData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR))/del(DIR_Y) + &
+                   (facezData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+2:nzc,VELC_FACE_VAR) - &
+                    facezData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,NGUARD+1:nzc-1,VELC_FACE_VAR))/del(DIR_Z) ))
 
 
-  maxu = max(maxu,maxval(facexData(VELC_FACE_VAR,GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
-  minu = min(minu,minval(facexData(VELC_FACE_VAR,GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
+  maxu = max(maxu,maxval(facexData(GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
+  minu = min(minu,minval(facexData(GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
 
-  maxv = max(maxv,maxval(faceyData(VELC_FACE_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI)))
-  minv = min(minv,minval(faceyData(VELC_FACE_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI)))
+  maxv = max(maxv,maxval(faceyData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
+  minv = min(minv,minval(faceyData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
 
-  maxw = max(maxw,maxval(facezData(VELC_FACE_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI+1)))
-  minw = min(minw,minval(facezData(VELC_FACE_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI+1)))
+  maxw = max(maxw,maxval(facezData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI+1,VELC_FACE_VAR)))
+  minw = min(minw,minval(facezData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI+1,VELC_FACE_VAR)))
 
-  maxp = max(maxp,maxval(solnData(PRES_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
-  minp = min(minp,minval(solnData(PRES_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
+  maxp = max(maxp,maxval(solnData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,PRES_VAR)))
+  minp = min(minp,minval(solnData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,PRES_VAR)))
 
 
 #elif NDIM == 2
 
-  maxu = max(maxu,maxval(facexData(VELC_FACE_VAR,GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
-  minu = min(minu,minval(facexData(VELC_FACE_VAR,GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
+  maxu = max(maxu,maxval(facexData(GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
+  minu = min(minu,minval(facexData(GRID_ILO:GRID_IHI+1,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
 
-  maxv = max(maxv,maxval(faceyData(VELC_FACE_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI)))
-  minv = min(minv,minval(faceyData(VELC_FACE_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI)))
+  maxv = max(maxv,maxval(faceyData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
+  minv = min(minv,minval(faceyData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI+1,GRID_KLO:GRID_KHI,VELC_FACE_VAR)))
 
   maxw = 0.0
   minw = 0.0
 
-  maxp = max(maxp,maxval(solnData(PRES_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
-  minp = min(minp,minval(solnData(PRES_VAR,GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI)))
+  maxp = max(maxp,maxval(solnData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,PRES_VAR)))
+  minp = min(minp,minval(solnData(GRID_ILO:GRID_IHI,GRID_JLO:GRID_JHI,GRID_KLO:GRID_KHI,PRES_VAR)))
 
-  mxdivv = max( mxdivv,maxval( (facexData(VELC_FACE_VAR,NGUARD+2:nxc,NGUARD+1:nyc-1,1) - &
-                    facexData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,1))/del(DIR_X) + &
-                   (faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+2:nyc,1) - &
-                    faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,1))/del(DIR_Y) ))
+  mxdivv = max( mxdivv,maxval( (facexData(NGUARD+2:nxc,NGUARD+1:nyc-1,1,VELC_FACE_VAR) - &
+                    facexData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,1,VELC_FACE_VAR))/del(DIR_X) + &
+                   (faceyData(NGUARD+1:nxc-1,NGUARD+2:nyc,1,VELC_FACE_VAR) - &
+                    faceyData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,1,VELC_FACE_VAR))/del(DIR_Y) ))
 
-  mndivv = min( mndivv,minval( (facexData(VELC_FACE_VAR,NGUARD+2:nxc,NGUARD+1:nyc-1,1) - &
-                    facexData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,1))/del(DIR_X) + &
-                   (faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+2:nyc,1) - &
-                    faceyData(VELC_FACE_VAR,NGUARD+1:nxc-1,NGUARD+1:nyc-1,1))/del(DIR_Y) ))
+  mndivv = min( mndivv,minval( (facexData(NGUARD+2:nxc,NGUARD+1:nyc-1,1,VELC_FACE_VAR) - &
+                    facexData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,1,VELC_FACE_VAR))/del(DIR_X) + &
+                   (faceyData(NGUARD+1:nxc-1,NGUARD+2:nyc,1,VELC_FACE_VAR) - &
+                    faceyData(NGUARD+1:nxc-1,NGUARD+1:nyc-1,1,VELC_FACE_VAR))/del(DIR_Y) ))
 
 
 #endif
 
-     call Grid_releaseBlkPtr(blockID,solnData,CENTER)
-     call Grid_releaseBlkPtr(blockID,facexData,FACEX)
-     call Grid_releaseBlkPtr(blockID,faceyData,FACEY)
+     call Grid_releaseBlkPtr(block,solnData,CENTER)
+     call Grid_releaseBlkPtr(block,facexData,FACEX)
+     call Grid_releaseBlkPtr(block,faceyData,FACEY)
 #if NDIM == 3
-     call Grid_releaseBlkPtr(blockID,facezData,FACEZ)
+     call Grid_releaseBlkPtr(block,facezData,FACEZ)
 #endif
+     call itor%next()
   enddo
+
+  call Grid_releaseLeafIterator(itor)
 
   vecmaxaux(1) = mxdivv
   vecminaux(1) = mndivv

@@ -34,7 +34,7 @@
 
 
 
-subroutine ins_UstarStats( blockCount, blockList, print_flg, qin_flg)
+subroutine ins_UstarStats(print_flg, qin_flg)
 
 #include "Flash.h"
   use Grid_interface, only : Grid_getDeltas,         &
@@ -53,12 +53,10 @@ subroutine ins_UstarStats( blockCount, blockList, print_flg, qin_flg)
 #include "constants.h"
   include "Flash_mpi.h"
   !! ---- Argument List ----------------------------------
-  integer, INTENT(IN) :: blockCount
-  integer, INTENT(IN), dimension(MAXBLOCKS) :: blockList 
   logical, INTENT(IN) :: print_flg, qin_flg
   !! -----------------------------------------------------
 
-
+#if 0
   integer, dimension(2,MDIM) :: blkLimits, blkLimitsGC
             
   real, pointer, dimension(:,:,:,:) :: facexData,faceyData,facezData,solnData
@@ -146,6 +144,7 @@ subroutine ins_UstarStats( blockCount, blockList, print_flg, qin_flg)
   if ((ins_meshMe .eq. MASTER_PE) .and. print_flg) &
   write(*,*) 'Mean DivUstar, DeltaMass=', ins_meanDivUstar, ins_deltamass
 
+#endif
   return
 
 end subroutine ins_UstarStats
