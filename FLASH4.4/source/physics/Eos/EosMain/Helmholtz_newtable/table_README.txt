@@ -3,10 +3,10 @@ The table contains the following information in the following format
 Row 1: number of variables	number of derivatives
 Row 2: number of cells computed in each direction
 Row 3: Flags for whether log is used in each direction
-Row 4: energy array size	energy array
-Row 5: density array size	density array
-Row 6: Ye array size	Ye array
-Row 7: sumy array size	sumy array
+Row 4: sumy array size	sumy array
+Row 5: Ye array size	Ye array
+Row 6: energy array size	energy array
+Row 7: density array size	density array
 
 Row 8-16:
 Columns 0-48: the weights for entropy and two first derivatives 
