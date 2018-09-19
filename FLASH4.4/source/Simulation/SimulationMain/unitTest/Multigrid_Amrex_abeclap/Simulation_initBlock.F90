@@ -46,7 +46,7 @@ subroutine Simulation_initBlock(solnData,block)
 #include "Flash.h"
 
   !!$ Arguments -----------------------
-  real,dimension(:,:,:,:),pointer :: solnData
+  real,dimension(:,:,:,:),pointer :: solnData, solnDataX, solnDataY, solnDataZ
   type(block_metadata_t), intent(in) :: block
   integer :: blockID
   !!$ ---------------------------------
@@ -129,6 +129,22 @@ subroutine Simulation_initBlock(solnData,block)
   solnData(:,:,:,ALPHACC_VAR) = 1.0
   solnData(:,:,:,BETACC_VAR) = factor
 
+!Initialize facevars
+#if NFACE_VARS > 0
+  call Grid_getBlkPtr(block, solnDataX, FACEX)
+  solnDataX(:,:,:,BETA_FACE_VAR) = factor
+  call Grid_releaseBlkPtr(block, solnDataX, FACEX)
+#if NDIM >1
+  call Grid_getBlkPtr(block, solnDataY, FACEY)
+  solnDataY(:,:,:,BETA_FACE_VAR) = factor
+  call Grid_releaseBlkPtr(block, solnDataY, FACEY)
+#endif
+#if NDIM >2
+  call Grid_getBlkPtr(block, solnDataZ, FACEZ)
+  solnDataZ(:,:,:,BETA_FACE_VAR) = factor
+  call Grid_releaseBlkPtr(block, solnDataZ, FACEZ)
+#endif
+#endif
 !!$  write(*,*) 'BlockID=',blockID
 !!$  write(*,*) 'Center coordinates=',coord
 !!$  write(*,*) 'Size =',bsize
