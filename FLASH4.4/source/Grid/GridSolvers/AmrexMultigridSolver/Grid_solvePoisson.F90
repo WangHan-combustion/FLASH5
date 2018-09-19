@@ -195,6 +195,8 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
     call amrex_boxarray_destroy(ba(ilev))
     call amrex_distromap_destroy(dm(ilev))
   end do
-       
+  
+  deallocate(solution,rhs,ba,dm)
+     
   call Timers_stop("Grid_solvePoisson")
 end subroutine Grid_solvePoisson
