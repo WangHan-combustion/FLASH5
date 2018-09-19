@@ -65,7 +65,7 @@ subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, bcTypes, bcValue
                                     gr_amrexLs_max_iter,gr_amrexLs_max_fmg_iter,&
                                     gr_amrexLs_composite_solve, gr_amrexLs_ref_ratio,&
                                     gr_amrexLs_max_coarsening_level, gr_amrexLs_bottom_solver
-  use gr_physicalMultifabs,  ONLY : unk
+  use gr_physicalMultifabs,  ONLY : unk, facevarx, facevary, facevarz
   !!
   use amrex_multifab_module, ONLY : amrex_multifab, amrex_multifab_destroy, & 
                                                               amrex_multifab_build_alias, amrex_multifab_build
@@ -140,10 +140,12 @@ subroutine Grid_solveAbecLaplacian (iSoln, iSrc, iAlpha, iBeta, bcTypes, bcValue
           nodal(idim) = .true.
           call amrex_multifab_build(beta(idim,ilev), ba(ilev), dm(ilev), 1, 0, nodal)
        end do
-       call amrex_average_cellcenter_to_face(beta(:,ilev), bcoef(ilev), geom(ilev))
-!       call amrex_multifab_build_alias(beta(1,ilev), facevarx(ilev), BETA_FACE_VAR, 1)
-!       call amrex_multifab_build_alias(beta(2,ilev), facevary(ilev), BETA_FACE_VAR, 1)
-!       call amrex_multifab_build_alias(beta(3,ilev), facevarz(ilev), BETA_FACE_VAR, 1)      
+!       call amrex_average_cellcenter_to_face(beta(:,ilev), bcoef(ilev), geom(ilev))
+       call amrex_multifab_build_alias(beta(1,ilev), facevarx(ilev), BETA_FACE_VAR, 1)
+       call amrex_multifab_build_alias(beta(2,ilev), facevary(ilev), BETA_FACE_VAR, 1)
+#if NDIM>2
+       call amrex_multifab_build_alias(beta(3,ilev), facevarz(ilev), BETA_FACE_VAR, 1)      
+#endif
     end do
      
 !  Select BCs to send to AMReX poisson solver
