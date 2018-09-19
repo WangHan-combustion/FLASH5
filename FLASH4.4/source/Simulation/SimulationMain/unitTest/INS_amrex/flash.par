@@ -3,20 +3,27 @@
 ## 
 ## Contains default values for all runtime parameters specific to this simulation
 ## 
-plot_var_1 = "dens"
-plot_var_2 = "pfft"
-plot_var_3 = "diff"
-plot_var_4 = "asol"
+#plot_var_1 = "dens"
+#plot_var_2 = "pfft"
+#plot_var_3 = "diff"
+#plot_var_4 = "asol"
+
+ins_invRe = 1.0
 
 nblockx                        = 2
 nblocky                        = 2
 nblockz                        = 2
 
+nend = 1
+dtinit = 0.0001
+dtmin  = 0.0000001
+dtmax  = 0.001
+
 #    AMR refinement parameters  
-lrefine_min       = 3
-lrefine_max       = 3
-refine_var_1      = "dens"
-refine_cutoff_1   = 0.5
+lrefine_min       = 1
+lrefine_max       = 1
+#refine_var_1      = "dens"
+#refine_cutoff_1   = 0.5
 #derefine_cutoff_1 = 0.5
 #nrefs                          = 0
 
@@ -26,12 +33,12 @@ ymax                           = 1.
 ymin                           = 0.
 zmax                           = 1.
 zmin                           = 0.
-xr_boundary_type               = "dirichlet"
-xl_boundary_type               = "dirichlet"
-yr_boundary_type               = "dirichlet"
-yl_boundary_type               = "dirichlet"
-zr_boundary_type               = "dirichlet"
-zl_boundary_type               = "dirichlet"
+xr_boundary_type               = "periodic"
+xl_boundary_type               = "periodic"
+yr_boundary_type               = "periodic"
+yl_boundary_type               = "periodic"
+zr_boundary_type               = "periodic"
+zl_boundary_type               = "periodic"
 
 # allowDtSTSDominate             = .FALSE.
 # alwaysComputeUserVars          = .true.

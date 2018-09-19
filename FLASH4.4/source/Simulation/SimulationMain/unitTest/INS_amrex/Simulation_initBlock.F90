@@ -58,7 +58,7 @@ subroutine Simulation_initBlock(solnData,block)
   real,allocatable, dimension(:) ::xCenter,yCenter,zCenter
   integer :: sizeX,sizeY,sizeZ
 
-  real :: Lx, Ly, Lz, xi, yi, zi, Phi_ijk, F_ijk
+  real :: Lx, Ly, Lz, xi, yi, zi, Phi_ijk, F_ijk, xf, yf, zf
 
 
   real, parameter :: pfb_waven_x = 2.
@@ -69,6 +69,8 @@ subroutine Simulation_initBlock(solnData,block)
   logical :: gcell = .true.
 
   real(wp), contiguous, pointer :: facexData(:,:,:,:), faceyData(:,:,:,:), facezData(:,:,:,:)
+
+  real :: del(MDIM)
 
   !----------------------------------------------------------------------
   blkLimits = block%limits
@@ -83,7 +85,9 @@ subroutine Simulation_initBlock(solnData,block)
   sizeX = SIZE(xCenter)
   sizeY = SIZE(yCenter)
   sizeZ = SIZE(zCenter)
-  
+ 
+  call Grid_getDeltas(block%level,del)
+ 
   call Grid_getCellCoords(IAXIS, block, CENTER, gcell, xCenter, sizeX)
   if (NDIM >= 2) call Grid_getCellCoords(JAXIS, block, CENTER, gcell, yCenter, sizeY)
   if (NDIM == 3) call Grid_getCellCoords(KAXIS, block, CENTER, gcell, zCenter, sizeZ)
@@ -101,27 +105,29 @@ subroutine Simulation_initBlock(solnData,block)
   Ly = sim_yMax - sim_yMin  
   Lz = sim_zMax - sim_zMin
 
-  !call Grid_getBlkPtr(block,facexData,FACEX)
-  !call Grid_getBlkPtr(block,faceyData,FACEY)
-  !call Grid_getBlkPtr(block,facezData,FACEZ)
+  call Grid_getBlkPtr(block,facexData,FACEX)
+  call Grid_getBlkPtr(block,faceyData,FACEY)
+  call Grid_getBlkPtr(block,facezData,FACEZ)
 
   do k = blkLimitsGC(LOW,KAXIS), blkLimitsGC(HIGH,KAXIS)
      do j = blkLimitsGC(LOW,JAXIS), blkLimitsGC(HIGH,JAXIS)
         do i = blkLimitsGC(LOW,IAXIS), blkLimitsGC(HIGH,IAXIS)
-          xi=xCenter(i)
-          yi=yCenter(j)
-          zi=zCenter(k)
 
-           Phi_ijk = sin(2.*PI*xi) * &
-                     sin(2.*PI*yi) * &
-                     sin(2.*PI*zi)
+           xi=xCenter(i)
+           yi=yCenter(j)
+           zi=zCenter(k)
 
-  
-           F_ijk  = -12*(PI**2)*Phi_ijk
-           
-           solnData(i,j,k,ASOL_VAR) = Phi_ijk
+           xf = xi - 0.5*del(IAXIS)
+           yf = yi - 0.5*del(JAXIS)
+           zf = zi - 0.5*del(KAXIS)
 
-           solnData(i,j,k,PRHS_VAR) = F_ijk
+           facexData(i,j,k,VELC_FACE_VAR) =  1.0*cos(2*PI*xf)*sin(2*PI*yi)*sin(2*PI*zi)
+           faceyData(i,j,k,VELC_FACE_VAR) = -0.5*sin(2*PI*xi)*cos(2*PI*yf)*sin(2*PI*zi)
+           facezData(i,j,k,VELC_FACE_VAR) = -0.5*sin(2*PI*xi)*sin(2*PI*yi)*cos(2*PI*zf)
+
+           facexData(i,j,k,VELA_FACE_VAR) = facexData(i,j,k,VELC_FACE_VAR)
+           faceyData(i,j,k,VELA_FACE_VAR) = faceyData(i,j,k,VELC_FACE_VAR)
+           facezData(i,j,k,VELA_FACE_VAR) = facezData(i,j,k,VELC_FACE_VAR) 
 
         enddo
      enddo
@@ -129,16 +135,12 @@ subroutine Simulation_initBlock(solnData,block)
 
 
   ! set values for u,v velocities and pressure
-  solnData(:,:,:,DIFF_VAR) = 0.0
-  solnData(:,:,:,PFFT_VAR) = 0.0
+  solnData(:,:,:,DENS_VAR) = 1.0
 
-  !facexData(:,:,:,RH1F_FACE_VAR) = 1.0
-  !faceyData(:,:,:,RH1F_FACE_VAR) = 2.0
-  !facezData(:,:,:,RH1F_FACE_VAR) = 3.0
+  call Grid_releaseBlkPtr(block,facexData,FACEX)
+  call Grid_releaseBlkPtr(block,faceyData,FACEY)
+  call Grid_releaseBlkPtr(block,facezData,FACEZ)
 
-  !call Grid_releaseBlkPtr(block,facexData,FACEX)
-  !call Grid_releaseBlkPtr(block,faceyData,FACEY)
-  !call Grid_releaseBlkPtr(block,facezData,FACEZ)
 
 !!$  write(*,*) 'BlockID=',blockID
 !!$  write(*,*) 'Center coordinates=',coord
