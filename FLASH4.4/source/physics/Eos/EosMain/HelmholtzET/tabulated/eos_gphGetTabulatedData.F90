@@ -2,11 +2,11 @@
 !!
 !! NAME
 !!
-!!  eos_gphGetSpeciesTabulatedData
+!!  eos_gphGetTabulatedData
 !!
 !! SYNOPSIS
 !!
-!!  call eos_gphGetSpeciesTabulatedData (integer (in) :: species,
+!!  call eos_gphGetTabulatedData (integer (in) :: species,
 !!                                        real    (in) :: speciesTemperature,
 !!                                        real    (in) :: speciesDensity,
 !!                                        integer (in) :: maxComp,
@@ -37,13 +37,13 @@
 !!  See definitions of EOS_TABINT_DERIV_* in eos_gphData and EOS_TAB_NDERIVS for
 !!  the numbering of derivatives.
 !!***
-subroutine eos_gphGetSpeciesTabulatedData (species,            &
+subroutine eos_gphGetTabulatedData (species,            &
                                             speciesTemperature, &
                                             speciesDensity,     &
                                             wantedDerivs, &
                                             outData              )
 
-  use eos_gphInterface, ONLY: eos_gphGetSpeciesAnyTableData, eos_gphFindTablePos, &
+  use eos_gphInterface, ONLY: eos_gphGetAnyTableData, eos_gphFindTablePos, &
                               eos_gphUpdateOutsideCount
   use eos_gphData, ONLY: eos_gphIonizationKind,     &
                           eos_gphIntEnergyKind,       &
@@ -105,7 +105,7 @@ subroutine eos_gphGetSpeciesTabulatedData (species,            &
 !
   if (ANY(wantedDerivs(:,EOS_TABVT_ZF) .GE. 0)) then
 
-      call eos_gphGetSpeciesAnyTableData (species,            &
+      call eos_gphGetAnyTableData (species,            &
                                         speciesTemperature, &
                                         speciesDensity,     &
                                         (wantedDerivs .GE. 0),&
@@ -121,7 +121,7 @@ subroutine eos_gphGetSpeciesTabulatedData (species,            &
 
   if (ANY(wantedDerivs(:,EOS_TABVT_EN) .GE. 0)) then
 
-      call eos_gphGetSpeciesAnyTableData (species,            &
+      call eos_gphGetAnyTableData (species,            &
                                         speciesTemperature, &
                                         speciesDensity,     &
                                         (wantedDerivs .GE. 0),&
@@ -137,7 +137,7 @@ subroutine eos_gphGetSpeciesTabulatedData (species,            &
 
   if (ANY(wantedDerivs(:,EOS_TABVT_HC) .GE. 0)) then
 
-      call eos_gphGetSpeciesAnyTableData (species,            &
+      call eos_gphGetAnyTableData (species,            &
                                         speciesTemperature, &
                                         speciesDensity,     &
                                         (wantedDerivs .GE. 0),&
@@ -153,7 +153,7 @@ subroutine eos_gphGetSpeciesTabulatedData (species,            &
 
   if (ANY(wantedDerivs(:,EOS_TABVT_PR) .GE. 0)) then
 
-      call eos_gphGetSpeciesAnyTableData (species,            &
+      call eos_gphGetAnyTableData (species,            &
                                         speciesTemperature, &
                                         speciesDensity,     &
                                         (wantedDerivs .GE. 0),&
@@ -169,7 +169,7 @@ subroutine eos_gphGetSpeciesTabulatedData (species,            &
 
   if (ANY(wantedDerivs(:,EOS_TABVT_ENTR) .GE. 0)) then
 
-      call eos_gphGetSpeciesAnyTableData (species,            &
+      call eos_gphGetAnyTableData (species,            &
                                         speciesTemperature, &
                                         speciesDensity,     &
                                         (wantedDerivs .GE. 0),&
@@ -189,4 +189,4 @@ subroutine eos_gphGetSpeciesTabulatedData (species,            &
 !
 !
   return
-end subroutine eos_gphGetSpeciesTabulatedData
+end subroutine eos_gphGetTabulatedData

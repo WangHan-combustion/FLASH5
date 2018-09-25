@@ -2,11 +2,11 @@
 !!
 !! NAME
 !!
-!!  eos_gphGetSpeciesAnyTableData
+!!  eos_gphGetAnyTableData
 !!
 !! SYNOPSIS
 !!
-!!  call eos_gphGetSpeciesAnyTableData(integer (in)  :: species,
+!!  call eos_gphGetAnyTableData(integer (in)  :: species,
 !!                                    real    (in)  :: speciesTemperature,
 !!                                    real    (in)  :: speciesDensity,
 !!                                    integer (in)  :: maxComp,
@@ -36,7 +36,7 @@
 #include "constants.h"
 #include "Eos.h"
 
-subroutine eos_gphGetSpeciesAnyTableData (species,            &
+subroutine eos_gphGetAnyTableData (species,            &
                                         speciesTemperature, &
                                         speciesDensity,     &
                                         wanted, &
@@ -133,7 +133,7 @@ subroutine eos_gphGetSpeciesAnyTableData (species,            &
   end select
 
   if (varType == 0) then
-      call Driver_abortFlash ('[eos_gphGetSpeciesAnyTableData] ERROR: no handle to tables')
+      call Driver_abortFlash ('[eos_gphGetAnyTableData] ERROR: no handle to tables')
   end if
 !
 !
@@ -343,4 +343,4 @@ subroutine eos_gphGetSpeciesAnyTableData (species,            &
 !
 !
   return
-end subroutine eos_gphGetSpeciesAnyTableData
+end subroutine eos_gphGetAnyTableData
