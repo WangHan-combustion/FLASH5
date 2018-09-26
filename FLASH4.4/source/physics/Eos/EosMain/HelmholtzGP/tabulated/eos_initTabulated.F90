@@ -29,12 +29,12 @@
 
 subroutine eos_initTabulated()
 
-  use eos_gphData,                ONLY : EOS_TAB_FOR_ION,           &
-                                         EOS_TAB_FOR_ELE,           &
+  use eos_gphData,                ONLY : EOS_TAB_FOR_ION => EOS_TAB_FOR_MAT,&
+                                         EOS_TAB_FOR_ELE => EOS_TAB_FOR_MAT,&
                                          EOS_TAB_FOR_MAT,           &
                                          EOS_TAB_NDERIVS,           &
-                                         EOS_TAB_NALLTAB,           &
-                                         EOS_TABVT_ZF   ,           &
+                                         EOS_TAB_NALLTAB => EOS_GPH_NALLTAB,           &
+                                         EOS_TABVT_ZF =>EOS_TABVT_ENTR  ,           &
                                          EOS_TABVT_EN   ,           &
                                          EOS_TABVT_HC   ,           &
                                          EOS_TABVT_PR   ,           &
@@ -48,7 +48,7 @@ subroutine eos_initTabulated()
                                           op_maxTablesZF,            &
                                           op_maxTablesEN,            &
                                           op_maxTablesHC,            &
-                                          EOS_TAB_NCOMP,          &
+                                          EOS_TAB_NCOMP=> EOS_TAB_FOR_MAT,          &
                                           eos_tabTotalNumSpecies,           &
                                           eos_useLogTables,           &
                                           eos_tableKind,              &
@@ -104,6 +104,17 @@ subroutine eos_initTabulated()
 
   real,pointer :: temperatures(:)
   real,pointer :: densities(:)
+
+
+  integer,dimension(EOST_MAX_IVARS) :: tdims
+
+  tdims(:) = 1
+  ASSERT(  TheGphTable % tg(EOS_TABVT_ENTR) % td % N  == tableDim  )
+  do i=1,tableDim
+     tdims(i) = TheGphTable % tg(EOS_TABVT_ENTR) % td % c(i) % nIval
+  end do
+  allocate( d (0:ncorners-1, 0:nderivs, tdims(1), tdims(2), tdims(2), tdims(4)) )
+  TheGphTable % tg(EOS_TABVT_ENTR) % table => d
 !
 !
 !    ...Set internal parameters.

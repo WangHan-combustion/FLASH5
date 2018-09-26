@@ -119,12 +119,12 @@ end subroutine eos_gphFindTablePos
                                         lowerBoundaryTemp,withinBoundaryTemp,withinBoundaryDens,&
                                              resultTT, &
                                         T1in,T2in,D1in,D2in)
-       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_TAB_NALLTAB
+       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_GPH_NALLTAB
        implicit none
        integer, intent (in)  :: species
        real,    intent (in)  :: speciesTemperature
        real,    intent (in)  :: speciesDensity
-       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
+       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_GPH_NALLTAB)
        integer, intent (in)  :: selTT
        integer, intent (in)  :: needDerivs
   integer,intent(IN) :: i,j,k,l
@@ -144,11 +144,11 @@ end subroutine eos_gphFindTablePos
                                                  speciesDensity,     &
                                                  wantedDerivs, &
                                                  outData              )
-       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_TAB_NALLTAB, &
+       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_GPH_NALLTAB, &
                              EOS_TABVT_ENTR, &
                              EOS_TAB_NDERIVS
        implicit none
-       integer, intent (in) :: wantedDerivs(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
+       integer, intent (in) :: wantedDerivs(EOS_TAB_NCOMP,EOS_GPH_NALLTAB)
        integer, intent (in) :: species
        real,    intent (in) :: speciesTemperature
        real,    intent (in) :: speciesDensity
@@ -193,14 +193,14 @@ end subroutine eos_gphFindTablePos
                                      wanted,      &
                                      td,& 
                                      tbZF,tbEN,tbHC)
-       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_TAB_NALLTAB, &
-            eosT_tableGroupDescT, &
+       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_GPH_NALLTAB, &
+            eosT_tableIvarsetDescT, &
             eosT_oneVarTablePT
 
        implicit none
 
-       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
-       type(eosT_tableGroupDescT),intent(inout) :: td(:)
+       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_GPH_NALLTAB)
+       type(eosT_tableIvarsetDescT),intent(inout) :: td(:)
        type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbHC
 
        character (len=80), intent (in) :: tableName
@@ -212,53 +212,18 @@ end subroutine eos_gphFindTablePos
                                      wanted,      &
                                      td,& 
                                      tbZF,tbEN,tbPR,tbHC,tbEntr)
-       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_TAB_NALLTAB, &
-            eosT_tableGroupDescT, &
+       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_GPH_NALLTAB, &
+            eosT_tableIvarsetDescT, &
             eosT_oneVarTablePT
        implicit none
-       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
-       type(eosT_tableGroupDescT),intent(inout) :: td(:)
+       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_GPH_NALLTAB)
+       type(eosT_tableIvarsetDescT),intent(inout) :: td(:)
        type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbPR,tbHC,tbEntr
 
        character (len=80), intent (in) :: tableName
      end subroutine eos_gphReadIonmix4Tables
   end interface
 
-  interface
-     subroutine eos_tabReadOpacplotTables (tableName,   &
-                                           groupName,   &
-                                     wanted,      &
-                                     td,& 
-                                     tbZF,tbEN,tbPR,tbHC,tbEntr)
-       use eos_tabData,ONLY: EOS_TAB_NCOMP,EOS_TAB_NALLTAB, &
-            eosT_tableGroupDescT, &
-            eosT_oneVarTablePT
-       implicit none
-       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
-       type(eosT_tableGroupDescT),intent(inout) :: td(:)
-       type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbPR,tbHC,tbEntr
-
-       character (len=80), intent (in) :: tableName
-       character (len=80), intent (in) :: groupName
-     end subroutine eos_tabReadOpacplotTables
-  end interface
-
-  interface
-     subroutine eos_tabReadPropaceosTables (tableName,   &
-                                     wanted,      &
-                                     td,& 
-                                     tbZF,tbEN,tbPR,tbHC)
-       use eos_tabData,ONLY: EOS_TAB_NCOMP,EOS_TAB_NALLTAB, &
-            eosT_tableGroupDescT, &
-            eosT_oneVarTablePT
-       implicit none
-       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
-       type(eosT_tableGroupDescT),intent(inout) :: td(:)
-       type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbPR,tbHC
-
-       character (len=80), intent (in) :: tableName
-     end subroutine eos_tabReadPropaceosTables
-  end interface
 
   interface
      subroutine eos_gphReadTables (tableKind,   &
@@ -267,14 +232,14 @@ end subroutine eos_gphFindTablePos
                                wanted,      &
                                td,&
                                      tbZF,tbEN,tbPR,tbHC,tbEntr)
-       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_TAB_NALLTAB, &
-            eosT_tableGroupDescT, &
+       use eos_gphData,ONLY: EOS_TAB_NCOMP,EOS_GPH_NALLTAB, &
+            eosT_tableIvarsetDescT, &
             eosT_oneVarTablePT
 
        implicit none
 
-       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
-  type(eosT_tableGroupDescT),intent(inout) :: td(:)
+       logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_GPH_NALLTAB)
+  type(eosT_tableIvarsetDescT),intent(inout) :: td(:)
        type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbPR,tbHC,tbEntr
 
        character (len=80), intent (in) :: tableKind

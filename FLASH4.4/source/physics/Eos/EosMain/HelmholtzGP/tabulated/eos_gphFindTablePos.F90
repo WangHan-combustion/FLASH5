@@ -6,9 +6,7 @@
 !!
 !! SYNOPSIS
 !!
-!!  call eos_gphFindTablePos(integer (in)  :: species,
-!!                                    real    (in)  :: speciesTemperature,
-!!                                    real    (in)  :: speciesDensity,
+!!  call eos_gphFindTablePos(integer (real    (in)  :: xpos(EOST_MAX_IVARS),
 !!                                    integer (in)  :: maxComp,
 !!                                    integer (in)  :: selTT)
 !!
@@ -24,7 +22,7 @@
 !! ARGUMENTS
 !!
 !!   species            : The species index
-!!   speciesTemperature : The species temperature
+!!   xpos(ivi) : The species temperature
 !!   speciesDensity     : The species density
 !!   maxComp :          : The highest component (ions, electrons, or matter) for which
 !!                        data are to be returned
@@ -35,63 +33,51 @@
 #include "Flash.h"
 #include "Eos.h"
 
-subroutine eos_gphFindTablePos (species,            &
-                                        speciesTemperature, &
-                                        speciesDensity,     &
+subroutine eos_gphFindTablePos (        xpos, &
                                         selTT,              &
                                         i,j,k,l,&
-                                        tau, delta, &
+                                        taus, &
                                         iPrev, kPrev, &
-                                        lowerBoundaryDens, &
-                                        lowerBoundaryTemp,withinBoundaryTemp,withinBoundaryDens, &
+                                        lowerBoundary, &
+                                        withinBoundary, &
                                         T1,T2,D1,D2)
 
   use Driver_interface,  ONLY : Driver_abortFlash
-  use eos_gphData,      ONLY : EOS_TAB_NCOMP,              &
-                               EOS_TAB_NALLTAB,            &
-                               EOS_TABVT_ZF,               &
-                               EOS_TABVT_EN,               &
-                               EOS_TABVT_HC,               &
-                               EOS_TABVT_PR,               &
-                               EOS_TABVT_ENTR,             &
+  use eos_gphData,      ONLY : EOS_TABVT_ENTR,             &
                                 eos_useLogTables,          &
-                                eosT_varTableGroupPT,      &
-                                eos_allTab
+                                eosT_varTableGroupT,      &
+                                eos_gphTheTable
 
 
   implicit none
 
-  integer, intent (in)  :: species
-  real,    intent (in)  :: speciesTemperature
-  real,    intent (in)  :: speciesDensity
+  real,    intent (in)  :: xpos(EOST_MAX_IVARS)
   integer, intent (in)  :: selTT
 
-  type(eosT_varTableGroupPT),pointer :: thisTypeTable
-  real,    pointer :: thisTypeDensity (:)
-  real,    pointer :: thisTypeTemperature (:)
+  type(eosT_varTableGroupT),pointer :: thisTypeTable
+  real,    pointer :: thisTypeIvar (:)
 
-  logical,intent(OUT) :: lowerBoundaryDens
-  logical :: upperBoundaryDens
-  logical,intent(OUT) :: withinBoundaryDens
-  logical,intent(OUT) :: lowerBoundaryTemp
-  logical :: upperBoundaryTemp
-  logical,intent(OUT) :: withinBoundaryTemp
+#define DENS_IVAR 1
+#define TEMP_IVAR 2
+
+  logical,intent(OUT) :: lowerBoundary(1:EOST_MAX_IVARS)
+  logical :: upperBoundary(1:EOST_MAX_IVARS)
+  logical,intent(OUT) :: withinBoundary(1:EOST_MAX_IVARS)
   logical :: found
+  integer :: ivi                ! input var index
 
   integer :: d,t
   integer,intent(OUT) :: i,j,k,l
   integer,intent(INOUT) :: iPrev,kPrev
   integer :: varType
-  integer :: nstepsDensity
-  integer :: nstepsTemperature
+  integer :: nsteps
   integer :: g
 
   real,intent(OUT) :: D1,D2,T1,T2
   real :: f1,f2,f3,f4
   real :: o1,o2,o3,o4
-  real :: speciesDensityTT
-  real :: speciesTemperatureTT
-  real,intent(out) :: tau,delta
+  real :: xi
+  real,intent(out) :: taus(EOST_MAX_IVARS)
 
 !
 !
@@ -99,6 +85,7 @@ subroutine eos_gphFindTablePos (species,            &
 !
 !
   select case (selTT)
+#if(0)
   case(EOS_TABULAR_Z)
      varType = EOS_TABVT_ZF
   case(EOS_TABULAR_E)
@@ -107,6 +94,7 @@ subroutine eos_gphFindTablePos (species,            &
      varType = EOS_TABVT_HC
   case(EOS_TABULAR_P)
      varType = EOS_TABVT_PR
+#endif
   case(EOS_TABULAR_S)
      varType = EOS_TABVT_ENTR
   case default
@@ -117,9 +105,10 @@ subroutine eos_gphFindTablePos (species,            &
       call Driver_abortFlash ('[eos_gphFindTablePos] ERROR: no handle to tables')
   end if
 
-  thisTypeTable => eos_allTab(species)%tg(varType)
-  thisTypeDensity => thisTypeTable%td%Densities
-  thisTypeTemperature => thisTypeTable%td%Temperatures
+  thisTypeTable => eos_gphTheTable%tg(varType)
+
+ Do ivi = 1,tableDim
+  thisTypeIvar => thisTypeTable%td % c(i) % val
 !
 !
 !   ...Get the current temperature and ion number density of the species and find:
@@ -151,45 +140,48 @@ subroutine eos_gphFindTablePos (species,            &
 !
 !                         T1 =< speciesTemperature =< T2
 !                         D1 =<   speciesDensity   =< D2
+!      Generic:
+!                         T1 =< xpos(ivi) =< T2
+!                         D1 =<   pos(ivi)   =< D2
 !
 !
-  if (eos_useLogTables) then
-      speciesTemperatureTT = log10 (speciesTemperature)
-      speciesDensityTT     = log10 (speciesDensity)
+!!$  if (eos_useLogTables) then
+!!$      xi = log10 (xpos(ivi))
+!!$      xi     = log10 (pos(ivi))
+!!$  else
+      xi = xpos(ivi)
+      xi     = pos(ivi)
+!!$  end if
+
+  nsteps = thisTypeTable%td % c(i) % nIval + 1
+
+  lowerBoundary( ivi ) = xi < thisTypeIvar (1                )
+  if (lowerBoundary( ivi )) then
+     upperBoundary( ivi ) = .FALSE.
   else
-      speciesTemperatureTT = speciesTemperature
-      speciesDensityTT     = speciesDensity
+     upperBoundary( ivi ) = xi > thisTypeIvar (nsteps) .OR. nsteps == 1
   end if
+  withinBoundary( ivi ) = (.not.lowerBoundary( ivi )) .and. (.not.upperBoundary( ivi ))
 
-  nstepsTemperature = thisTypeTable%td%ntemp
-
-  lowerBoundaryTemp = speciesTemperatureTT < thisTypeTemperature (1                )
-  if (lowerBoundaryTemp) then
-     upperBoundaryTemp = .FALSE.
-  else
-     upperBoundaryTemp = speciesTemperatureTT > thisTypeTemperature (nstepsTemperature) .OR. nstepsTemperature == 1
-  end if
-  withinBoundaryTemp = (.not.lowerBoundaryTemp) .and. (.not.upperBoundaryTemp)
-
-  if (withinBoundaryTemp) then
-     if (iPrev > 0 .AND. iPrev < nstepsTemperature) then
+  if (withinBoundary( ivi )) then
+     if (iPrev > 0 .AND. iPrev < nsteps) then
         i = iPrev
-        j = i + 1; 
-     
-        T1 = thisTypeTemperature (i)
-        T2 = thisTypeTemperature (j)
+        j = i + 1
 
-        found = ((T1-speciesTemperatureTT)*(T2-speciesTemperatureTT) .LE. 0.0)
+        T1 = thisTypeIvar (i)
+        T2 = thisTypeIvar (j)
+
+        found = ((T1-xi)*(T2-xi) .LE. 0.0)
      else
         found = .FALSE.
      end if
      if (.NOT.found) then
-        do t = 2,nstepsTemperature
-           if (thisTypeTemperature (t) >= speciesTemperatureTT) then
+        do t = 2,nsteps
+           if (thisTypeIvar (t) >= xi) then
               i  = t - 1
               j  = t
-              T1 = thisTypeTemperature (i)
-              T2 = thisTypeTemperature (j)
+              T1 = thisTypeIvar (i)
+              T2 = thisTypeIvar (j)
 #ifndef FLASH_OPENMP              
               iPrev = i
 #endif
@@ -198,52 +190,54 @@ subroutine eos_gphFindTablePos (species,            &
         end do
      end if
   else
-      if (lowerBoundaryTemp) then
+      if (lowerBoundary( ivi )) then
           i  = 1
           j  = 1
-          T1 = speciesTemperatureTT
-          T2 = thisTypeTemperature (1)
+          T1 = xi
+          T2 = thisTypeIvar (1)
       end if
 
-      if (upperBoundaryTemp) then
-          i  = nstepsTemperature
-          j  = nstepsTemperature
-          T1 = thisTypeTemperature (nstepsTemperature)
-          T2 = speciesTemperatureTT
+      if (upperBoundary( ivi )) then
+          i  = nsteps
+          j  = nsteps
+          T1 = thisTypeIvar (nsteps)
+          T2 = xi
       end if
   end if
 
-  nstepsDensity = thisTypeTable%td%ndens
+
+
+  nsteps = thisTypeTable%td % c(i) % nIval + 1
 
   ! Check to see if density is off of the table:
-  lowerBoundaryDens = speciesDensityTT < thisTypeDensity (1            )
-  if (lowerBoundaryDens) then
-     upperBoundaryDens = .FALSE.
+  lowerBoundary( ivi ) = xi < thisTypeIvar (1            )
+  if (lowerBoundary( ivi )) then
+     upperBoundary( ivi ) = .FALSE.
   else
-     upperBoundaryDens = speciesDensityTT > thisTypeDensity (nstepsDensity) .OR. nstepsDensity == 1
+     upperBoundary( ivi ) = xi > thisTypeIvar (nsteps) .OR. nsteps == 1
   end if
-  withinBoundaryDens = (.not.lowerBoundaryDens) .and. (.not.upperBoundaryDens)
+  withinBoundary( ivi ) = (.not.lowerBoundary( ivi )) .and. (.not.upperBoundary( ivi ))
 
   ! if (withinBoundaryDens == .true.) -> Density is within table boundaries
-  if (withinBoundaryDens) then
-     if (kPrev > 0 .AND. kPrev < nstepsDensity) then
+  if (withinBoundary( ivi )) then
+     if (kPrev > 0 .AND. kPrev < nsteps) then
         k = kPrev
         l = k + 1
 
-        D1 = thisTypeDensity (k)
-        D2 = thisTypeDensity (l)
+        D1 = thisTypeIvar (k)
+        D2 = thisTypeIvar (l)
 
-        found = ((D1-speciesDensityTT)*(D2-speciesDensityTT) .LE. 0.0)
+        found = ((D1-xi)*(D2-xi) .LE. 0.0)
      else
         found = .FALSE.
      end if
      if (.NOT.found) then
-        do d = 2,nstepsDensity
-           if (thisTypeDensity (d) >= speciesDensityTT) then
+        do d = 2,nsteps
+           if (thisTypeIvar (d) >= xi) then
               k  = d - 1
               l  = d
-              D1 = thisTypeDensity (k)
-              D2 = thisTypeDensity (l)
+              D1 = thisTypeIvar (k)
+              D2 = thisTypeIvar (l)
 #ifndef FLASH_OPENMP
               kPrev = k
 #endif              
@@ -252,23 +246,24 @@ subroutine eos_gphFindTablePos (species,            &
         end do
      end if
   else
-      if (lowerBoundaryDens) then
+      if (lowerBoundary( ivi )) then
           k  = 1
           l  = 1
-          D1 = speciesDensityTT
-          D2 = thisTypeDensity (1)
+          D1 = xi
+          D2 = thisTypeIvar (1)
       end if
 
-      if (upperBoundaryDens) then
-          k  = nstepsDensity
-          l  = nstepsDensity
-          D1 = thisTypeDensity (nstepsDensity)
-          D2 = speciesDensityTT
+      if (upperBoundary( ivi )) then
+          k  = nsteps
+          l  = nsteps
+          D1 = thisTypeIvar (nsteps)
+          D2 = xi
       end if
   end if
 
-  tau   = (speciesTemperatureTT - T1) / (T2 - T1)
-  delta = (speciesDensityTT     - D1) / (D2 - D1)
+  taus( ivi ) =
+  tau   = (xi - T1) / (T2 - T1)
+  delta = (xi     - D1) / (D2 - D1)
 
 
   return

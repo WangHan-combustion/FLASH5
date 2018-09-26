@@ -1,7 +1,4 @@
 Eos += eos_gphData.o                    	 \
-           eos_gphBrowseIonmixTables.o           \
-           eos_gphBrowseIonmix4Tables.o          \
-           eos_gphBrowseTables.o                 \
            eos_gphFindTablePos.o                 \
            eos_gphGetSpeciesAnyTableData.o       \
            eos_gphGetSpeciesTabulatedData.o      \
@@ -13,3 +10,8 @@ Eos += eos_gphData.o                    	 \
            eos_gphReadTables.o                   \
            eos_gphUpdateOutsideCount.o           \
            eos_gphZeroOutsideCounts.o
+
+#           eos_gphBrowseIonmixTables.o           \
+           eos_gphBrowseIonmix4Tables.o          \
+           eos_gphBrowseTables.o                 \
+

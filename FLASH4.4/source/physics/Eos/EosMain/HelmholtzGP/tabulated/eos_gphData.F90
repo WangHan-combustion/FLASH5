@@ -30,8 +30,6 @@ module eos_gphData
 !!notdef  integer, parameter :: EOS_TAB_FOR_MAT = 3
 #endif
 
-  ! maximum in this code version is 4 input variables (canonical: spec. energy, density, Ye, A or similar)
-#define EOST_MAX_IVARS 4
   integer, parameter :: EOS_TAB_NCOMP = EOS_TAB_FOR_MAT
 
   ! variable types - families of tabulated variables
@@ -76,30 +74,13 @@ module eos_gphData
   integer, allocatable, save :: eos_gphHeatCpKind        (:,:)
 
 
-  type eosT_oneVarTablePT
+  type eosT_oneCellTablePT
      type(eosT_varTableGroupT),pointer :: pg ! group to which this table belongs
      real, pointer                      :: table(:,:) ! the data, for one cell
-!!$     logical                            :: isLogData
-!!$     character(len=80)                  :: fromFile !for debugging
-!!$     integer                            :: tableNo  !for debugging
-!!$     integer                            :: lineNo   !for debugging
-!!$     integer                            :: derivedFrom1 !for debugging ?
-!!$     integer                            :: derivedFrom2 !for debugging ?
-!!$     integer                            :: varType ! whether (1) Z, (2) eint, (3) pres, (4) hc, ..
-!!$     integer                            :: component ! whether (1) EOS_TAB_FOR_ION,
-!!$                                                     ! (2) EOS_TAB_FOR_ELE, (3) EOS_TAB_FOR_MAT, ?..
 !     integer                            :: iSave     ! cached location of previous lookup
 !     integer                            :: kSave     ! cached location of previous lookup
-  end type eosT_oneVarTablePT
+  end type eosT_oneCellTablePT
 
-  integer,dimension(EOST_MAX_IVARS) :: tdims
-  tdims(:) = 1
-  ASSERT(  TheGphTable % tg(EOS_TABVT_ENTR) % td % N  == tableDim  )
-  do i=1,tableDim
-     tdims(i) = TheGphTable % tg(EOS_TABVT_ENTR) % td % c(i) % nIval
-  end do
-  allocate( d (0:ncorners-1, 0:nderivs, tdims(1), tdims(2), tdims(2), tdims(4)) )
-  TheGphTable % tg(EOS_TABVT_ENTR) % table => d
   
   
   type eosT_oneVarTablePT
@@ -120,7 +101,7 @@ module eos_gphData
 
 
   type eosT_tableIvarDescT
-     integer                           :: nIval  = 0
+     integer                           :: nIval  = 0 ! number of Ivar values (cells), or mnemonic Number of InterVALs...
      real, pointer                     :: val(:) => null() ! to be allocated to length nIval+1
      logical                           :: isLog = .FALSE. !whether *temperatures* and *densities* are stored as logarithms.
   end type eosT_tableIvarDescT

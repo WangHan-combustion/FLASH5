@@ -36,7 +36,7 @@
 #include "constants.h"
 #include "Eos.h"
 
-subroutine eos_gphGetAnyTableData (species,            &
+subroutine eos_gphGetAnyTableData (xpos,            &
                                         speciesTemperature, &
                                         speciesDensity,     &
                                         wanted, &
@@ -70,7 +70,7 @@ subroutine eos_gphGetAnyTableData (species,            &
 
   implicit none
 
-  integer, intent (in)  :: species
+  real,    intent (in)  :: xpos(EOST_MAX_IVARS)
   logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
   real,    intent (in)  :: speciesTemperature
   real,    intent (in)  :: speciesDensity

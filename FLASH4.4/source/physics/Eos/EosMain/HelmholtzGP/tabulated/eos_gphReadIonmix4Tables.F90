@@ -71,7 +71,7 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
                                 EOS_TABVT_PR,         &
                                 EOS_TABVT_HC,         &
                                 EOS_TABVT_ENTR,       &
-                                eosT_tableGroupDescT, &
+                                eosT_tableIvarsetDescT, &
                                 eosT_oneVarTablePT
 
   use Driver_interface,  ONLY : Driver_abortFlash
@@ -84,7 +84,7 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
 #include "Eos.h"
 
   logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
-  type(eosT_tableGroupDescT),intent(inout) :: td(:)
+  type(eosT_tableIvarsetDescT),intent(inout) :: td(:)
   type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbPR,tbHC,tbEntr
   character (len=80), intent (in) :: tableName
 
