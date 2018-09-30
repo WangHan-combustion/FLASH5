@@ -41,13 +41,18 @@ module eos_gphData
   integer, parameter :: EOS_TABVT_OP = 6 !opacities
   integer, parameter :: EOS_GPH_NALLTAB = 1 ! number of output vars (aka saved state functions, aka ovars) supported
 
+  integer, parameter :: TEMP_IVAR = 0
+  integer, parameter :: ENER_IVAR = 1
+  integer, parameter :: DENS_IVAR = 2
+
   integer, parameter :: EOS_TABINT_DERIV_0 = 0 ! leave as 0
   integer, parameter :: EOS_TABINT_DERIV_DT = 1 ! leave consecutive
   integer, parameter :: EOS_TABINT_DERIV_DD = 2 ! leave consecutive
-  integer, parameter :: EOS_TAB_NDERIVS = 2
+  integer, parameter :: EOST_MAX_DERIVS = 14
+  integer, parameter :: EOST_MAX_DERDEGREE = 2
 
 
-  logical, save :: eos_useLogTables
+  logical, save :: eos_useLogTables = .FALSE.
 
   integer, save :: op_maxNstepsDensityZF
   integer, save :: op_maxNstepsDensityEN
@@ -65,18 +70,18 @@ module eos_gphData
   real, parameter :: one  =  1.0
   real, parameter :: ten  = 10.0
 
-  character (len=80), allocatable, save ::  eos_gphleKind (:)
-  character (len=80), allocatable, save ::  eos_gphleName (:)
-  character (len=80), allocatable, save ::  eos_groupName (:)
+  character (len=80), allocatable, save ::  eos_gphKind
+  character (len=80), allocatable, save ::  eos_gphFileName
 
-  integer, allocatable, save :: eos_gphIonizationKind    (:,:)
-  integer, allocatable, save :: eos_gphIntEnergyKind     (:,:)
-  integer, allocatable, save :: eos_gphHeatCpKind        (:,:)
+  integer, allocatable, save :: eos_gphIonizationKind
+  integer, allocatable, save :: eos_gphIntEnergyKind
+  integer, allocatable, save :: eos_gphHeatCpKind
 
 
   type eosT_oneCellTablePT
      type(eosT_varTableGroupT),pointer :: pg ! group to which this table belongs
      real, pointer                      :: table(:,:) ! the data, for one cell
+     real                               :: ells(EOST_MAX_IVARS)
 !     integer                            :: iSave     ! cached location of previous lookup
 !     integer                            :: kSave     ! cached location of previous lookup
   end type eosT_oneCellTablePT
@@ -86,6 +91,8 @@ module eos_gphData
   type eosT_oneVarTablePT
      type(eosT_varTableGroupT),pointer :: pg ! group to which this table belongs
      real, pointer                      :: table(:,:,:,:,:,:) ! the data, (2+EOST_MAX_IVARS)-dimensional
+     real, pointer                      :: ells(:,:,:,:,:) ! l-coefficients for each cell
+     integer,pointer                    :: derDefs(:,:)    ! derivative definitions
 !!$     logical                            :: isLogData
 !!$     character(len=80)                  :: fromFile !for debugging
 !!$     integer                            :: tableNo  !for debugging
@@ -107,7 +114,8 @@ module eos_gphData
   end type eosT_tableIvarDescT
 
   type eosT_tableIvarsetDescT
-     integer                           :: n
+     integer                           :: N
+     integer                           :: ncorners, nderivs
      type(eosT_tableIvarDescT)         :: c(EOST_MAX_IVARS) ! up to EOST_MAX_IVARS table "coordinates"
 !!$     logical                           :: isLog = .FALSE. !whether any *temperatures* and *densities* etc. are stored as logarithms?
   end type eosT_tableIvarsetDescT
@@ -133,6 +141,38 @@ module eos_gphData
   end type eosT_varAllTablesT
 
   type(eosT_varAllTablesT), allocatable,target,save :: eos_gphTheTable
+
+
+  ! Derivate definitions for expressing which derivatirs are "wanted"
+  integer,dimension(EOST_MAX_IVARS, EOST_MAX_DERIVS),save :: eos_gphDerDefs
+
+  data eos_gphDerDefs /1,0,0,0, &
+                       0,1,0,0, &
+                       1,1,0,0, &
+                       2,0,0,0, &
+                       0,2,0,0, &
+                       0,0,1,0, &
+                       1,0,1,0, &
+                       0,1,1,0, &
+                       0,0,2,0, &
+                       0,0,0,1, &
+                       1,0,0,1, &
+                       0,1,0,1, &
+                       0,0,1,1, &
+                       0,0,0,2  /
+  ! some names for popular rows of this table:
+  integer,parameter :: EOS_GPHDERIV_10    =  1
+  integer,parameter :: EOS_GPHDERIV_01    =  2
+  integer,parameter :: EOS_GPHDERIV_11    =  3
+  integer,parameter :: EOS_GPHDERIV_20    =  4
+  integer,parameter :: EOS_GPHDERIV_02    =  5
+
+  integer,parameter :: EOS_GPHDERIV_E     =  EOS_GPHDERIV_10
+  integer,parameter :: EOS_GPHDERIV_D     =  EOS_GPHDERIV_01
+  integer,parameter :: EOS_GPHDERIV_ED    =  EOS_GPHDERIV_11
+  integer,parameter :: EOS_GPHDERIV_E2    =  EOS_GPHDERIV_20
+  integer,parameter :: EOS_GPHDERIV_D2    =  EOS_GPHDERIV_02
+
 
   type eosT_diagEvent
      real :: temp

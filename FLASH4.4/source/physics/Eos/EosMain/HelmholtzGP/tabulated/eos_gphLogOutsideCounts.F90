@@ -23,8 +23,7 @@ subroutine eos_gphLogOutsideCounts(force)
 
   use Eos_data,                   ONLY : eos_meshMe,                &
                                          eos_logLevel
-  use eos_gphData,                ONLY : EOS_TAB_NALLTAB,           &
-                                         eos_allTab, &
+  use eos_gphData,                ONLY : EOS_GPH_NALLTAB,           &
                                          eos_gphAllDiag
 
   use Logfile_interface
@@ -56,7 +55,7 @@ subroutine eos_gphLogOutsideCounts(force)
      doForce = force            ! as requested by argument
   end if
 
-  do species = 1,NSPECIES
+  do species = 1,size(eos_gphAllDiag,1)
      if (eos_gphAllDiag(species)%highTempCount > 0) then
 400     format(I3)
 401     format(I16)
@@ -72,7 +71,7 @@ subroutine eos_gphLogOutsideCounts(force)
         call Logfile_stampMessage(trim(str1)//trim(str2)//str3,doForce)
       end if
    end do
-  do species = 1,NSPECIES
+  do species = 1,size(eos_gphAllDiag,1)
      if (eos_gphAllDiag(species)%highDensCount > 0) then
         write(a1,400) species
         write(a2,401) eos_gphAllDiag(species)%highDensCount

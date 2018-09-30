@@ -35,15 +35,15 @@
 
 subroutine eos_gphFindTablePos (        xpos, &
                                         selTT,              &
-                                        i,j,k,l,&
+                                        ipos,jpos,&
                                         taus, &
-                                        iPrev, kPrev, &
+                                        iposPrev, &
                                         lowerBoundary, &
                                         withinBoundary, &
-                                        T1,T2,D1,D2)
+                                        clo,chi)
 
   use Driver_interface,  ONLY : Driver_abortFlash
-  use eos_gphData,      ONLY : EOS_TABVT_ENTR,             &
+  use eos_gphData,      ONLY :  EOS_TABVT_ENTR,             &
                                 eos_useLogTables,          &
                                 eosT_varTableGroupT,      &
                                 eos_gphTheTable
@@ -57,23 +57,21 @@ subroutine eos_gphFindTablePos (        xpos, &
   type(eosT_varTableGroupT),pointer :: thisTypeTable
   real,    pointer :: thisTypeIvar (:)
 
-#define DENS_IVAR 1
-#define TEMP_IVAR 2
-
   logical,intent(OUT) :: lowerBoundary(1:EOST_MAX_IVARS)
   logical :: upperBoundary(1:EOST_MAX_IVARS)
   logical,intent(OUT) :: withinBoundary(1:EOST_MAX_IVARS)
   logical :: found
   integer :: ivi                ! input var index
 
-  integer :: d,t
-  integer,intent(OUT) :: i,j,k,l
-  integer,intent(INOUT) :: iPrev,kPrev
+  integer :: t
+  integer,intent(OUT) :: ipos(EOST_MAX_IVARS),jpos(EOST_MAX_IVARS)
+  integer,intent(INOUT) :: iposPrev(EOST_MAX_IVARS)
+  integer :: i,j, tableDim !,k,l
   integer :: varType
   integer :: nsteps
   integer :: g
 
-  real,intent(OUT) :: D1,D2,T1,T2
+  real,intent(OUT) :: clo(EOST_MAX_IVARS),chi(EOST_MAX_IVARS)
   real :: f1,f2,f3,f4
   real :: o1,o2,o3,o4
   real :: xi
@@ -106,9 +104,10 @@ subroutine eos_gphFindTablePos (        xpos, &
   end if
 
   thisTypeTable => eos_gphTheTable%tg(varType)
+  tableDim = thisTypeTable%td % N 
 
  Do ivi = 1,tableDim
-  thisTypeIvar => thisTypeTable%td % c(i) % val
+  thisTypeIvar => thisTypeTable%td % c(ivi) % val
 !
 !
 !   ...Get the current temperature and ion number density of the species and find:
@@ -141,19 +140,19 @@ subroutine eos_gphFindTablePos (        xpos, &
 !                         T1 =< speciesTemperature =< T2
 !                         D1 =<   speciesDensity   =< D2
 !      Generic:
-!                         T1 =< xpos(ivi) =< T2
-!                         D1 =<   pos(ivi)   =< D2
+!                         clo(ivi) =< xpos(ivi) =< chi(ivi)
+!                         clo(ivi) =< xpos(ivi)   =< chi(ivi)
 !
 !
 !!$  if (eos_useLogTables) then
 !!$      xi = log10 (xpos(ivi))
-!!$      xi     = log10 (pos(ivi))
+!!$      xi     = log10 (xpos(ivi))
 !!$  else
       xi = xpos(ivi)
-      xi     = pos(ivi)
+      xi     = xpos(ivi)
 !!$  end if
 
-  nsteps = thisTypeTable%td % c(i) % nIval + 1
+  nsteps = thisTypeTable%td % c(ivi) % nIval + 1
 
   lowerBoundary( ivi ) = xi < thisTypeIvar (1                )
   if (lowerBoundary( ivi )) then
@@ -164,14 +163,14 @@ subroutine eos_gphFindTablePos (        xpos, &
   withinBoundary( ivi ) = (.not.lowerBoundary( ivi )) .and. (.not.upperBoundary( ivi ))
 
   if (withinBoundary( ivi )) then
-     if (iPrev > 0 .AND. iPrev < nsteps) then
-        i = iPrev
+     if (iposPrev(ivi) > 0 .AND. iposPrev(ivi) < nsteps) then
+        i = iposPrev(ivi)
         j = i + 1
 
-        T1 = thisTypeIvar (i)
-        T2 = thisTypeIvar (j)
+        clo(ivi) = thisTypeIvar (i)
+        chi(ivi) = thisTypeIvar (j)
 
-        found = ((T1-xi)*(T2-xi) .LE. 0.0)
+        found = ((clo(ivi)-xi)*(chi(ivi)-xi) .LE. 0.0)
      else
         found = .FALSE.
      end if
@@ -180,10 +179,10 @@ subroutine eos_gphFindTablePos (        xpos, &
            if (thisTypeIvar (t) >= xi) then
               i  = t - 1
               j  = t
-              T1 = thisTypeIvar (i)
-              T2 = thisTypeIvar (j)
+              clo(ivi) = thisTypeIvar (i)
+              chi(ivi) = thisTypeIvar (j)
 #ifndef FLASH_OPENMP              
-              iPrev = i
+              iposPrev(ivi) = i
 #endif
               exit
            end if
@@ -193,21 +192,25 @@ subroutine eos_gphFindTablePos (        xpos, &
       if (lowerBoundary( ivi )) then
           i  = 1
           j  = 1
-          T1 = xi
-          T2 = thisTypeIvar (1)
+          clo(ivi) = xi
+          chi(ivi) = thisTypeIvar (1)
       end if
 
       if (upperBoundary( ivi )) then
           i  = nsteps
           j  = nsteps
-          T1 = thisTypeIvar (nsteps)
-          T2 = xi
+          clo(ivi) = thisTypeIvar (nsteps)
+          chi(ivi) = xi
       end if
   end if
+  ipos(ivi) = i
+  jpos(ivi) = j
 
+  taus( ivi ) = (xi - clo(ivi)) / (chi(ivi) - clo(ivi))
 
-
-  nsteps = thisTypeTable%td % c(i) % nIval + 1
+#if(0)
+!! DUPLICATE !
+  nsteps = thisTypeTable%td % c(ivi) % nIval + 1
 
   ! Check to see if density is off of the table:
   lowerBoundary( ivi ) = xi < thisTypeIvar (1            )
@@ -220,14 +223,14 @@ subroutine eos_gphFindTablePos (        xpos, &
 
   ! if (withinBoundaryDens == .true.) -> Density is within table boundaries
   if (withinBoundary( ivi )) then
-     if (kPrev > 0 .AND. kPrev < nsteps) then
-        k = kPrev
+     if (iposPrev(ivi) > 0 .AND. iposPrev(ivi) < nsteps) then
+        k = iposPrev(ivi)
         l = k + 1
 
-        D1 = thisTypeIvar (k)
-        D2 = thisTypeIvar (l)
+        clo(ivi) = thisTypeIvar (k)
+        chi(ivi) = thisTypeIvar (l)
 
-        found = ((D1-xi)*(D2-xi) .LE. 0.0)
+        found = ((clo(ivi)-xi)*(chi(ivi)-xi) .LE. 0.0)
      else
         found = .FALSE.
      end if
@@ -236,11 +239,11 @@ subroutine eos_gphFindTablePos (        xpos, &
            if (thisTypeIvar (d) >= xi) then
               k  = d - 1
               l  = d
-              D1 = thisTypeIvar (k)
-              D2 = thisTypeIvar (l)
+              clo(ivi) = thisTypeIvar (k)
+              chi(ivi) = thisTypeIvar (l)
 #ifndef FLASH_OPENMP
-              kPrev = k
-#endif              
+              iposPrev(ivi) = k
+#endif
               exit
            end if
         end do
@@ -249,22 +252,24 @@ subroutine eos_gphFindTablePos (        xpos, &
       if (lowerBoundary( ivi )) then
           k  = 1
           l  = 1
-          D1 = xi
-          D2 = thisTypeIvar (1)
+          clo(ivi) = xi
+          chi(ivi) = thisTypeIvar (1)
       end if
 
       if (upperBoundary( ivi )) then
           k  = nsteps
           l  = nsteps
-          D1 = thisTypeIvar (nsteps)
-          D2 = xi
+          clo(ivi) = thisTypeIvar (nsteps)
+          chi(ivi) = xi
       end if
   end if
+  ipos(ivi) = k
+  jpos(ivi) = l
 
-  taus( ivi ) =
-  tau   = (xi - T1) / (T2 - T1)
-  delta = (xi     - D1) / (D2 - D1)
+  taus( ivi ) = (xi - clo(ivi)) / (chi(ivi) - clo(ivi))
+#endif
 
+ End Do
 
   return
 end subroutine eos_gphFindTablePos

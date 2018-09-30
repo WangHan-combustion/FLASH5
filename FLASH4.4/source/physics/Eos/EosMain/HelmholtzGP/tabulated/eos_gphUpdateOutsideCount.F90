@@ -46,8 +46,7 @@ subroutine eos_gphUpdateOutsideCount(species, &
                                      dens)
 
   use Eos_data,                   ONLY : eos_logLevel
-  use eos_gphData,                ONLY : EOS_TAB_NALLTAB,           &
-                                         eos_allTab, &
+  use eos_gphData,                ONLY : EOS_GPH_NALLTAB,           &
                                          eos_gphAllDiag
   implicit none
 

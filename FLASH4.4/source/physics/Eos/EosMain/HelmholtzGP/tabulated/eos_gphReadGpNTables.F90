@@ -2,18 +2,18 @@
 !!
 !! NAME
 !!
-!!  eos_gphReadIonmix4Tables
+!!  eos_gphReadGpNTables
 !!
 !! SYNOPSIS
 !!
-!!  call eos_gphReadIonmix4Tables (character (in) :: tableName (len=80),
+!!  call eos_gphReadGpNTables (character (in) :: tableName (len=80),
 !!                            logical   (in) :: needZFTable,
 !!                            logical   (in) :: needENTable,
 !!                            logical   (in) :: needHCTable)
 !!
 !! DESCRIPTION
 !!
-!!  Reads tabulated opacities from an IONMIX4 datafile output. The tabulated opacities
+!!  Reads tabulated opacities from an GPN datafile output. The tabulated opacities
 !!  will be stored into the 4-dimensional arrays: ! DEV: removed !
 !!
 !!             eos_gphIonizationTables  (t,d,g,indexZF)  (in cm^2/g)
@@ -48,28 +48,29 @@
 !!
 !! ARGUMENTS
 !!
-!!  tableName   : the name of the IONMIX4 file
+!!  tableName   : the name of the GPN file
 !!  indexZF     : table counting index where average ionization data will be placed
 !!  indexEN     : table counting index where internal energy data will be placed
 !!  indexHC     : table counting index where specific heat data will be placed
 !!
 !!***
-subroutine eos_gphReadIonmix4Tables (tableName,   &
+subroutine eos_gphReadGpNTables (tableName,   &
                                 wanted, &
                                 td,&
-                                tbZF,tbEN,tbPR,tbHC,tbEntr)
+!!$                                tbZF,tbEN,tbPR,tbHC,&
+                                tbEntr)
 
   use Eos_data,         ONLY : eos_smallT
   use eos_gphData,      ONLY :  eos_useLogTables,          &
                                 EOS_TAB_NCOMP,         &
-                                EOS_TAB_NALLTAB,         &
-                                EOS_TAB_FOR_ION,         &
-                                EOS_TAB_FOR_ELE,         &
+                                EOS_GPH_NALLTAB,         &
+!!$                                EOS_TAB_FOR_ION,         &
+!!$                                EOS_TAB_FOR_ELE,         &
                                 EOS_TAB_FOR_MAT,         &
-                                EOS_TABVT_ZF,         &
-                                EOS_TABVT_EN,         &
-                                EOS_TABVT_PR,         &
-                                EOS_TABVT_HC,         &
+!!$                                EOS_TABVT_ZF,         &
+!!$                                EOS_TABVT_EN,         &
+!!$                                EOS_TABVT_PR,         &
+!!$                                EOS_TABVT_HC,         &
                                 EOS_TABVT_ENTR,       &
                                 eosT_tableIvarsetDescT, &
                                 eosT_oneVarTablePT
@@ -83,22 +84,26 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
 #include "constants.h"
 #include "Eos.h"
 
-  logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
+  logical,            intent (in) :: wanted(EOS_TAB_NCOMP,EOS_GPH_NALLTAB)
   type(eosT_tableIvarsetDescT),intent(inout) :: td(:)
-  type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbPR,tbHC,tbEntr
+!!$  type(eosT_oneVarTablePT),pointer,dimension(:) :: tbZF,tbEN,tbPR,tbHC,tbEntr
+  type(eosT_oneVarTablePT),intent(INOUT),dimension(:) :: tbEntr
   character (len=80), intent (in) :: tableName
 
   character (len=80) :: dummyLine
 
-!!  needZFTable : if yes, average ionization data are needed from the IONMIX4 table
-!!  needENTable : if yes, internal energy data are needed from the IONMIX4 table
-!!  needHCTable : if yes,        specific heat data are needed from the IONMIX4 table
+!!  needZFTable : if yes, average ionization data are needed from the GPN table
+!!  needENTable : if yes, internal energy data are needed from the GPN table
+!!  needHCTable : if yes,        specific heat data are needed from the GPN table
   logical :: needZFTable
   logical :: needENTables
   logical :: needPRTables
   logical :: needHCTables
   logical :: needEntrTables
   logical :: fileExists, doread
+
+  integer :: tableDim, ncorners, nderivs
+  integer,dimension(EOST_MAX_IVARS) :: tdims
 
   integer :: ntemp, ndens
   real, allocatable :: temperatures(:)
@@ -133,7 +138,7 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
   inquire (file = tableName , exist = fileExists)
 
   if (.not.fileExists) then
-       call Driver_abortFlash ('[eos_gphReadIonmix4Tables] ERROR: no IONMIX4 file found')
+       call Driver_abortFlash ('[eos_gphReadGpNTables] ERROR: no GPN file found')
   end if
 
   fileUnit = ut_getFreeFileUnit ()
@@ -144,6 +149,12 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
 !      if any of the grids is not found.
 !
 !
+  read (fileUnit,'(A80)')  dummyLine
+  print*,'Read "',trim(dummyLine),'" from ',trim(tableName)
+  read(fileUnit,*) tableDim, nderivs
+  ncorners      = 2**tableDim
+
+#ifdef SUPPRESS_OLD4
   read (fileUnit,'(2I10)') nstepsTemperature , nstepsDensity
   ntemp = nstepsTemperature
   ndens = nstepsDensity
@@ -158,15 +169,15 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
   read (fileUnit,'(I12)') ngroupsEnergy
 
   if (nstepsTemperature <= 0) then
-      call Driver_abortFlash ('[eos_gphReadIonmix4Tables] ERROR: no IONMIX4 temperature grid found')
+      call Driver_abortFlash ('[eos_gphReadGpNTables] ERROR: no GPN temperature grid found')
   end if
 
   if (nstepsDensity <= 0) then
-      call Driver_abortFlash ('[eos_gphReadIonmix4Tables] ERROR: no IONMIX4 density grid found')
+      call Driver_abortFlash ('[eos_gphReadGpNTables] ERROR: no GPN density grid found')
   end if
 
   if (ngroupsEnergy <= 0) then
-      call Logfile_stampMessage('[eos_gphReadIonmix4Tables] WARNING: no IONMIX4 energy group grid found')
+      call Logfile_stampMessage('[eos_gphReadGpNTables] WARNING: no GPN energy group grid found')
   end if
 
 
@@ -208,7 +219,11 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
   needENTables = ANY(wanted(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_EN))
   needPRTables = ANY(wanted(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_PR))
   needHCTables = ANY(wanted(:,EOS_TABVT_HC))
-  needEntrTables = ANY(wanted(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_ENTR))
+#endif
+  needEntrTables = ANY(wanted(EOS_TAB_FOR_MAT:EOS_TAB_FOR_MAT,EOS_TABVT_ENTR))
+  print*,'wanted:',wanted
+  print*,'wanted(EOS_TAB_FOR_MAT:EOS_TAB_FOR_MAT,EOS_TABVT_ENTR):',wanted(EOS_TAB_FOR_MAT:EOS_TAB_FOR_MAT,EOS_TABVT_ENTR)
+#ifdef SUPPRESS_OLD4
 !
 !
 !   ...Establish the temperature and density grid for the average ionization (if needed)
@@ -251,7 +266,7 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
       end if
 
   else
-      !   ...Skip not needed data from the IONMIX4 file.
+      !   ...Skip not needed data from the GPN file.
       notneededData =   nstepsDensity * nstepsTemperature
       read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
   end if
@@ -306,13 +321,13 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
                     log10(tbPR(n)%table(1:nstepsTemperature,1:nstepsDensity))
             end if
          else
-            !   ...Skip not needed data from the IONMIX4 file.
+            !   ...Skip not needed data from the GPN file.
             notneededData =   nstepsDensity * nstepsTemperature
             read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
          end if
       end do
   else
-      !   ...Skip not needed data from the IONMIX4 file.
+      !   ...Skip not needed data from the GPN file.
       notneededData =   nstepsDensity * nstepsTemperature
       read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
       read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
@@ -373,13 +388,13 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
                     log10(tbEN(n)%table(1:nstepsTemperature,1:nstepsDensity))
             end if
          else
-            !   ...Skip not needed data from the IONMIX4 file.
+            !   ...Skip not needed data from the GPN file.
             notneededData =   nstepsDensity * nstepsTemperature
             read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
          end if
       end do
   else
-      !   ...Skip not needed data from the IONMIX4 file.
+      !   ...Skip not needed data from the GPN file.
       notneededData =   nstepsDensity * nstepsTemperature
       read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
       read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
@@ -431,14 +446,14 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
                     log10(tbHC(n)%table(1:nstepsTemperature,1:nstepsDensity))
             end if
          else
-            !   ...Skip not needed data from the IONMIX4 file.
+            !   ...Skip not needed data from the GPN file.
             notneededData =   nstepsDensity * nstepsTemperature
             read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
          end if
       end do
 
   else
-      !   ...Skip not needed data from the IONMIX4 / IONMIX6 file.
+      !   ...Skip not needed data from the GPN / IONMIX6 file.
       notneededData =   nstepsDensity * nstepsTemperature
       read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
       read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
@@ -453,58 +468,72 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
   notneededData =   nstepsDensity * nstepsTemperature
   read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
 
+#endif
 !
 !
 !   ...Establish the temperature and density grid for the specific (electron) entropy (if needed)
-!      and read in the data.  This is onlyfor IONMIX6, not IONMIX4.
+!      and read in the data.  This is onlyfor IONMIX6, not GPN.
 !
 !
   if (needEntrTables) then
 
-      td(EOS_TABVT_ENTR)%ntemp = nstepsTemperature
-      td(EOS_TABVT_ENTR)%ndens = nstepsDensity
-      if (.NOT.associated(td(EOS_TABVT_ENTR)%Temperatures)) then
-         allocate(td(EOS_TABVT_ENTR)%Temperatures(ntemp)) 
-      end if
-      if (.NOT.associated(td(EOS_TABVT_ENTR)%Densities)) then
-         allocate(td(EOS_TABVT_ENTR)%Densities(ndens))
-      end if
+    n = EOS_TAB_FOR_MAT
+    associate (tdS => td(EOS_TABVT_ENTR), &
+               tbS => tbEntr(n))
 
-      do step = 1,nstepsDensity
-         td(EOS_TABVT_ENTR)%Densities(step) = densities(step)
+      tdS % N       = tableDim
+      tdS % nderivs = nderivs
+      tdS % ncorners = ncorners
+
+      read(fileUnit,*) (tdS % c(i) % nIval, i=1,tableDim)
+      do i=1,tableDim
+         tdims(i) = tdS % c(i) % nIval
+      end do
+      read(fileUnit,*)
+
+      do i=1,tableDim
+         allocate(tdS % c(i) % val(tdims(i)+1))
+         read(fileUnit,*)  tdS % c(i) % nIval, notneededData, &
+                           tdS % c(i) % val 
       end do
 
-      do step = 1,nstepsTemperature
-         td(EOS_TABVT_ENTR)%Temperatures(step) = temperatures(step)
+      allocate(tbS % derDefs(tableDim,nderivs))
+      do i=1,nderivs
+         read(fileUnit,*)  tbS % derDefs(:,i)
       end do
 
-      if (td(EOS_TABVT_ENTR)%isLog) then
-         td(EOS_TABVT_ENTR)%Densities    (1:nstepsDensity)     = log10(td(EOS_TABVT_ENTR)%Densities    (1:nstepsDensity) )
-         td(EOS_TABVT_ENTR)%Temperatures (1:nstepsTemperature) = log10(td(EOS_TABVT_ENTR)%Temperatures (1:nstepsTemperature) )
-         do n = 1,EOS_TAB_NCOMP
-            if (wanted(n,EOS_TABVT_ENTR)) tbEntr(n)%isLogData = .TRUE.
-         end do
-      end if
+      allocate(tbS % table(0:ncorners-1, 0:nderivs, tdims(1), tdims(2), tdims(2), tdims(4)))
+      allocate(tbS % ells (tableDim,                tdims(1), tdims(2), tdims(2), tdims(4)))
+         
 
-      n = EOS_TAB_FOR_ELE
+!!$      if (tdS % isLog) then
+!!$         tdS % c(2)%val    (1:nstepsDensity)     = log10(tdS % c(2)%val    (1:nstepsDensity) )
+!!$         tdS % c(1)%val (1:nstepsTemperature) = log10(tdS % c(1)%val (1:nstepsTemperature) )
+!!$         do n = 1,EOS_TAB_NCOMP
+!!$            if (wanted(n,EOS_TABVT_ENTR)) tbEntr(n)%isLogData = .TRUE.
+!!$         end do
+!!$      end if
+
+#ifdef SUPPRESS_OLD4
          doread = (n .LE. EOS_TAB_NCOMP)
          if (doread) doread = wanted(n,EOS_TABVT_ENTR)
          if (doread) then
-            allocate(tbEntr(n)%table(nstepsTemperature,nstepsDensity))
-            read (fileUnit,'(4E12.6)') ((tbEntr(n)%table(t,d), t = 1,nstepsTemperature), d = 1,nstepsDensity    )
+            allocate(tbS (nstepsTemperature,nstepsDensity))
+            read (fileUnit,'(4E12.6)') ((tbS (t,d), t = 1,nstepsTemperature), d = 1,nstepsDensity    )
 
-            tbEntr(n)%table(1:nstepsTemperature,1:nstepsDensity) = &
-                 tbEntr(n)%table(1:nstepsTemperature,1:nstepsDensity) * joule2erg / K
-            if (tbEntr(n)%isLogData) then
-               tbEntr(n)%table(1:nstepsTemperature,1:nstepsDensity) = &
-                    log10(tbEntr(n)%table(1:nstepsTemperature,1:nstepsDensity))
-            end if
+            tbS (1:nstepsTemperature,1:nstepsDensity) = &
+                 tbS (1:nstepsTemperature,1:nstepsDensity) * joule2erg / K
+!!$            if (tbEntr(n)%isLogData) then
+!!$               tbS (1:nstepsTemperature,1:nstepsDensity) = &
+!!$                    log10(tbS (1:nstepsTemperature,1:nstepsDensity))
+!!$            end if
          else
-            !   ...Skip not needed data from the IONMIX4 file.
+            !   ...Skip not needed data from the GPN file.
             notneededData =   nstepsDensity * nstepsTemperature
             read (fileUnit,'(4E12.6)') (dummyData, i = 1,notneededData)
          end if
-
+#endif
+        end associate
       !
       !   ...Stop reading here, we do not care about the remainder of the file.
       !
@@ -513,12 +542,14 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
 
   end if
 
+#ifdef SUPPRESS_OLD4
   deallocate(temperatures)
   deallocate(densities)
+#endif
 
 !
 !
-!   ...Close the IONMIX4 file.
+!   ...Close the GPN file.
 !
 !
   close (fileUnit)
@@ -528,4 +559,4 @@ subroutine eos_gphReadIonmix4Tables (tableName,   &
 !
 !
   return
-end subroutine eos_gphReadIonmix4Tables
+end subroutine eos_gphReadGpNTables

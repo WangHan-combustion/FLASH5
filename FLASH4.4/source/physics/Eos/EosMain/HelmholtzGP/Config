@@ -17,4 +17,6 @@ PARAMETER eos_fluffDens REAL 0.0
 VARIABLE gamc  EOSMAPINOUT: GAMC   # sound-speed gamma
 VARIABLE game  EOSMAPOUT:   GAME   # energy gamma
 
-#DATAFILES helm_table.dat
+PARAMETER eos_gphFileName STRING "helm_newtable.dat"
+
+DATAFILES helm_newtable.dat
