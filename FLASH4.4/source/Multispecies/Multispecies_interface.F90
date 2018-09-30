@@ -126,6 +126,14 @@ Module Multispecies_interface
     end subroutine Multispecies_finalize
   end interface
 
+  interface
+     subroutine Multispecies_computeAbarZbar(solnScalars, abarData, zbarData)
+       implicit none
+       real, intent(in), dimension(SPECIES_BEGIN:,:)  :: solnScalars
+       real, intent(inout), dimension(:) :: abarData, zbarData
+     end subroutine Multispecies_computeAbarZbar
+  end interface
+
   interface Multispecies_unitTest
      subroutine Multispecies_unitTest(fileUnit,perfect)
        integer, intent(IN) :: fileUnit
