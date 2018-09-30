@@ -59,17 +59,17 @@
 !!
 !!***
 
-subroutine eos_tabulated(mode, vecLen, eosData, massFrac, mask)
+subroutine eos_tabulated(mode, vecLen, eosData, vecBegin, vecEnd, mask, eosType, subtype)
 
 !==============================================================================
 
   implicit none
 # include "Eos.h"
-# include "Flash.h"
   integer, INTENT(in) :: mode, vecLen
   real,INTENT(inout), dimension(EOS_NUM*vecLen) :: eosData 
+  integer,optional,INTENT(in) :: vecBegin,vecEnd
   logical, optional, INTENT(in),target,dimension(EOS_VARS+1:EOS_NUM) :: mask
-  real, optional, INTENT(in),dimension(NSPECIES*vecLen)    :: massFrac
+  integer,optional,INTENT(in) :: eosType,subtype
 
   return
 end subroutine eos_tabulated

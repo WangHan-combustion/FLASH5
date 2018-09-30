@@ -72,11 +72,13 @@ module eos_localInterface
   end interface
 
   interface
-     subroutine eos_tabulated(mode, vecLen, eosData, massFrac, mask)
+     subroutine eos_tabulated(mode, vecLen, eosData, vecBegin, vecEnd, mask, eosType, subtype)
+       implicit none
        integer, INTENT(in) :: mode, vecLen
        real,INTENT(inout), dimension(EOS_NUM*vecLen) :: eosData 
+       integer,optional,INTENT(in) :: vecBegin,vecEnd
        logical, optional, INTENT(in),target,dimension(EOS_VARS+1:EOS_NUM) :: mask
-       real, optional, INTENT(in),dimension(NSPECIES*vecLen)    :: massFrac
+       integer,optional,INTENT(in) :: eosType,subtype
      end subroutine Eos_tabulated
   end interface
   interface
