@@ -6,3 +6,4 @@ Eos += eos_localInterface.o eos_idealGamma.o eos_idealGamma3T.o eos_mgamma.o eos
 	eos_initMtemp.o eos_initTabulated.o eos_tabFinalize.o\
 	eos_initNuclear.o eos_nuclear.o
 
+Eos += eos_externalComputeAbarZbar.o
