@@ -64,6 +64,7 @@ subroutine Eos_init()
   call Driver_getNumProcs(MESH_COMM,eos_meshNumProcs)
 
   call PhysicalConstants_get("ideal gas constant", eos_gasConstant)
+  call PhysicalConstants_get("Avogadro"          , eos_avo)
 
   call RuntimeParameters_get("gamma", eos_gamma)
   call RuntimeParameters_get("eos_singleSpeciesA", eos_singleSpeciesA)

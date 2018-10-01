@@ -40,6 +40,7 @@ module Eos_data
 #include "Eos_map.h"
 
   real, save :: eos_gasConstant 
+  real, save :: eos_avo
   real, save :: eos_smalle
   real, save :: eos_gamma
   real, save :: eos_singleSpeciesA

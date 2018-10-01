@@ -9,6 +9,7 @@ Multispecies += Multispecies_setProperty.o \
 	Multispecies_init.o \
 	Multispecies_list.o \
 	Multispecies_finalize.o \
+	Multispecies_computeAbarZbar.o \
 	Multispecies_unitTest.o Multispecies_interface.o
 
 

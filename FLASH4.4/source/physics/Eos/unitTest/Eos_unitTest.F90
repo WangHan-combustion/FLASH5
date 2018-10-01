@@ -74,6 +74,7 @@
 subroutine Eos_unitTest4(fileUnit, perfect, solnData, blkLimits, blockDesc)
 
   use Eos_interface, ONLY : Eos_wrapped, Eos
+  use eos_localInterface, ONLY: eos_externalComputeAbarZbar
 
   use block_metadata, ONLY : block_metadata_t
   use Eos_data, ONLY : eos_meshMe, eos_meshNumProcs
@@ -107,6 +108,7 @@ subroutine Eos_unitTest4(fileUnit, perfect, solnData, blkLimits, blockDesc)
   logical:: test1,test2,test3,test4 !for a block
 
   integer :: vecLen, blockOffset,  pres, dens, temp, e, n, m
+  integer ::                       abar, zbar
   integer :: isize, jsize, ksize, i,j,k, nStartsAtOne
   real, dimension(:), allocatable :: eosData
   real, dimension(:), allocatable :: massFrac
@@ -164,6 +166,7 @@ subroutine Eos_unitTest4(fileUnit, perfect, solnData, blkLimits, blockDesc)
      level = blockDesc % level
   end if
 
+!!$  goto 12345
   ! Testing density/temperature in; energy/pressure out
   if (eos_meshMe<maxPrintPE .AND. level > -1) print *,ap,'Block',blockID,' type',nodeType,' level',level
   if (eos_meshMe<maxPrintPE) print *,ap,'MODE_DENS_TEMP or similar: Density, temperature in; energy, pressure out; mode=', &
@@ -274,7 +277,7 @@ subroutine Eos_unitTest4(fileUnit, perfect, solnData, blkLimits, blockDesc)
      test2allB = .FALSE.
   endif
   
-
+!!$12345 continue
 !!$  test3allB = .TRUE.
 !!$  test4allB = .TRUE.
   if (eos_meshMe<maxPrintPE .AND. level > -1) print *,ap,'Block',blockID,' type',nodeType,' level',level
@@ -379,6 +382,8 @@ subroutine Eos_unitTest4(fileUnit, perfect, solnData, blkLimits, blockDesc)
   pres = (EOS_PRES-1)*vecLen
   dens = (EOS_DENS-1)*vecLen
   temp = (EOS_TEMP-1)*vecLen
+  abar = (EOS_ABAR-1)*vecLen
+  zbar = (EOS_ZBAR-1)*vecLen
   
      
   !! Get DENS and PRES to fill up input, also massFraction
@@ -393,7 +398,9 @@ subroutine Eos_unitTest4(fileUnit, perfect, solnData, blkLimits, blockDesc)
         eosData(pres+1:pres+vecLen) =  solnData(PRES_VAR,ib:ie,j,k)
         eosData(dens+1:dens+vecLen) =  solnData(DENS_VAR,ib:ie,j,k)
         eosData(temp+1:temp+vecLen) =  solnData(TEMP_VAR,ib:ie,j,k)
-        
+        call eos_externalComputeAbarZbar( solnData(SPECIES_BEGIN:,ib:ie,j,k),&
+             eosData(abar+1:abar+vecLen), eosData(zbar+1:zbar+vecLen) )
+
         call Eos(MODE_DENS_PRES,vecLen,eosData,massFrac,mask)
            
         do e=EOS_VARS+1,EOS_NUM

@@ -19,39 +19,37 @@
 
 subroutine eos_gphFinalize ()
 
-  use eos_gphData,   ONLY : eos_gphleKind,              &
-                             eos_gphleName,              &
-                             eos_groupName,              &
+  use eos_gphData,   ONLY : eos_gphKind,              &
+                             eos_gphFileName,              &
                              eos_gphIonizationKind,         &
                              eos_gphIntEnergyKind,           &
                              eos_gphHeatCpKind,          &
-           eos_allTab, &
+                             TheGphTable => eos_gphTheTable, &
            eos_gphAllDiag, &
-                             EOS_TAB_NALLTAB
+                             EOS_GPH_NALLTAB
   implicit none
 
-  integer :: species, i, j
+  integer :: i, j
 
-  do species = 1,NSPECIES
-     do i = 1,EOS_TAB_NALLTAB
+     do i = 1,EOS_GPH_NALLTAB
         ! Currently, the only way these pointers get different from null is by being allocated. - KW
-        if (associated(eos_allTab(species)%tg(i)%table)) then
-           do j = LBOUND(eos_allTab(species)%tg(i)%table,1), &
-                UBOUND(eos_allTab(species)%tg(i)%table,1)
-              if (associated(eos_allTab(species)%tg(i)%table(j)%table)) deallocate(eos_allTab(species)%tg(i)%table(j)%table)
+        nullify(theGphTable % tg(1) % table(1) % table)
+        nullify(theGphTable % tg(1) % table(1) % ells)
+           do j = LBOUND(theGphTable%tg(i)%table,1), &
+                UBOUND(theGphTable%tg(i)%table,1)
+              if (associated(theGphTable%tg(i)%table(j)%table)) deallocate(theGphTable%tg(i)%table(j)%table)
+              if (associated(theGphTable%tg(i)%table(j)%ells )) deallocate(theGphTable%tg(i)%table(j)%ells)
+              if (associated(theGphTable%tg(i)%table(j)%derDefs)) deallocate(theGphTable%tg(i)%table(j)%derDefs)
            end do
-           deallocate(eos_allTab(species)%tg(i)%table)
-        end if
-        if (associated(eos_allTab(species)%tg(i)%mgTable)) deallocate(eos_allTab(species)%tg(i)%mgTable)
-        if (associated(eos_allTab(species)%tg(i)%td%Temperatures)) deallocate(eos_allTab(species)%tg(i)%td%Temperatures)
-        if (associated(eos_allTab(species)%tg(i)%td%Densities)) deallocate(eos_allTab(species)%tg(i)%td%Densities)
+!!$        if (associated(theGphTable%tg(i)%td%Temperatures)) deallocate(theGphTable%tg(i)%td%Temperatures)
+!!$        if (associated(theGphTable%tg(i)%td%Densities)) deallocate(theGphTable%tg(i)%td%Densities)
      end do
-  end do
-  deallocate(eos_allTab)
-  deallocate(eos_gphAllDiag)
 
-  deallocate (eos_gphleKind)
-  deallocate (eos_gphleName)
+  deallocate(theGphTable)
+!!$  deallocate(eos_gphAllDiag)
+
+  deallocate (eos_gphKind)
+  deallocate (eos_gphFileName)
   deallocate (eos_gphIonizationKind)
   deallocate (eos_gphIntEnergyKind)
   deallocate (eos_gphHeatCpKind)

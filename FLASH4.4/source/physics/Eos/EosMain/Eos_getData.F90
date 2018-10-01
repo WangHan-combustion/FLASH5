@@ -100,6 +100,7 @@ subroutine Eos_getData(range,vecLen,solnData,gridDataStruct,eosData,massFrac, eo
 
   use Eos_data, ONLY: eos_eintSwitch, eos_smalle, eos_mapLookup
   use Driver_interface, ONLY : Driver_abortFlash
+  use eos_localInterface, ONLY: eos_externalComputeAbarZbar
   implicit none
   
 #include "Eos.h"
@@ -187,6 +188,9 @@ subroutine Eos_getData(range,vecLen,solnData,gridDataStruct,eosData,massFrac, eo
   !! DEV: If / when we add a ptr dummy argument for passing in an offset, this will be n = ptr
   do k = kb,ke
      do j = jb,je
+        call eos_externalComputeAbarZbar(&
+             solnData(SPECIES_BEGIN:,ib:ie,j,k),&
+             eosData(abar+n+1:abar+n+1+ie-ib), eosData(zbar+n+1:zbar+n+1+ie-ib) )
         do i = ib,ie
            if (velx_map > 0 .AND. vely_map > 0 .AND. velz_map > 0) then
               kineticEnergy  = 0.5*(solnData(velx_map,i,j,k)**2 + &

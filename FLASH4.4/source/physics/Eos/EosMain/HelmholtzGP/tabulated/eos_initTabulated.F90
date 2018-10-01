@@ -24,7 +24,6 @@
 
 #include "Eos.h"
 #include "Flash.h"
-#include "Multispecies.h"
 #include "constants.h"
 
 subroutine eos_initTabulated()
@@ -32,8 +31,8 @@ subroutine eos_initTabulated()
   use eos_gphData,                ONLY : EOS_TAB_FOR_ION => EOS_TAB_FOR_MAT,&
                                          EOS_TAB_FOR_ELE => EOS_TAB_FOR_MAT,&
                                          EOS_TAB_FOR_MAT,           &
-                                         EOS_TAB_NDERIVS,           &
                                          EOS_TAB_NALLTAB => EOS_GPH_NALLTAB,           &
+                                         EOS_GPH_NALLTAB,           &
                                          EOS_TABVT_ZF =>EOS_TABVT_ENTR  ,           &
                                          EOS_TABVT_EN   ,           &
                                          EOS_TABVT_HC   ,           &
@@ -49,25 +48,23 @@ subroutine eos_initTabulated()
                                           op_maxTablesEN,            &
                                           op_maxTablesHC,            &
                                           EOS_TAB_NCOMP=> EOS_TAB_FOR_MAT,          &
-                                          eos_tabTotalNumSpecies,           &
                                           eos_useLogTables,           &
-                                          eos_tableKind,              &
-                                          eos_tableName,              &
-                                          eos_groupName,              &
+                                          eos_gphKind,              &
+                                          eos_gphFileName,              &
                                           eos_gphIonizationKind,         &
                                           eos_gphIntEnergyKind,           &
                                           eos_gphHeatCpKind,          &
-                                          eos_allTab, &
+                                          TheGphTable => eos_gphTheTable, &
                                           eos_gphAllDiag
 
-  use Multispecies_interface,      ONLY : Multispecies_getProperty, Multispecies_setProperty, &
-                                          Multispecies_list
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use PhysicalConstants_interface, ONLY : PhysicalConstants_get
   use Driver_interface,            ONLY : Driver_abortFlash
-  use eos_gphInterface,            ONLY : eos_tabBrowseTables, eos_gphReadTables, &
-                                          eos_tabWriteTables
+!!$  use eos_gphInterface,            ONLY : eos_tabBrowseTables, eos_gphReadTables, &
+!!$                                          eos_tabWriteTables
+  use eos_gphInterface,            ONLY : eos_gphReadTables, eos_gphReadGpNTables
   
+  use Eos_data,                    ONLY : eos_type
   use Eos_data,                    ONLY : eos_globalMe, eos_meshMe, eos_entrEleScaleChoice
 
   implicit none
@@ -81,12 +78,12 @@ subroutine eos_initTabulated()
   logical :: needPRTable
   logical :: needEntrTable
   logical :: needTable
-  logical :: isIonmix4Like
-  logical :: isIonmix4, isIonmix6
+  logical :: isGpNLike
+  logical :: isGpN, isIonmix6
   logical :: isOpacplot
   logical :: wanted(EOS_TAB_NCOMP,EOS_TAB_NALLTAB)
 
-  integer :: i
+  integer :: i, j, ivi
 
   integer :: fileUnit
   integer :: nstepsDensityZF
@@ -98,9 +95,8 @@ subroutine eos_initTabulated()
   integer :: nstepsTemperatureHC
   integer :: nstepsTemperatureEntr
   integer :: ut_getFreeFileUnit
-  integer :: specno, spec
+  integer :: tabno
 
-  integer :: eosType(NSPECIES), eosSubType(NSPECIES)
 
   real,pointer :: temperatures(:)
   real,pointer :: densities(:)
@@ -108,62 +104,70 @@ subroutine eos_initTabulated()
 
   integer,dimension(EOST_MAX_IVARS) :: tdims
 
+#if 0
   tdims(:) = 1
   ASSERT(  TheGphTable % tg(EOS_TABVT_ENTR) % td % N  == tableDim  )
+  ASSERT(  TheGphTable % tg(EOS_TABVT_ENTR) % td % nderivs  == nderivs  )
+  TheGphTable % tg(EOS_TABVT_ENTR) % td % ncorners = 2**tableDim
   do i=1,tableDim
      tdims(i) = TheGphTable % tg(EOS_TABVT_ENTR) % td % c(i) % nIval
   end do
   allocate( d (0:ncorners-1, 0:nderivs, tdims(1), tdims(2), tdims(2), tdims(4)) )
   TheGphTable % tg(EOS_TABVT_ENTR) % table => d
+#endif
 !
 !
 !    ...Set internal parameters.
 !
 !
-
-  eos_tabTotalNumSpecies  = max (1,NSPECIES)
+  ! DONT HAVE ANY ?
 !
 !
 !    ...Allocate those arrays that depend on the # of species and # of energy groups alone.
 !
 !
-  allocate (eos_tableKind             (1:eos_tabTotalNumSpecies))
-  allocate (eos_tableName             (1:eos_tabTotalNumSpecies))
-  allocate (eos_groupName             (1:eos_tabTotalNumSpecies))
-  allocate (eos_gphIonizationKind    (EOS_TAB_NCOMP,1:eos_tabTotalNumSpecies))
-  allocate (eos_gphIntEnergyKind     (EOS_TAB_NCOMP,1:eos_tabTotalNumSpecies))
-  allocate (eos_gphHeatCpKind        (EOS_TAB_NCOMP,1:eos_tabTotalNumSpecies))
+  allocate (eos_gphKind)
+  allocate (eos_gphFileName)
+  allocate (eos_gphIonizationKind)
+  allocate (eos_gphIntEnergyKind)
+  allocate (eos_gphHeatCpKind)
 
 !
 !
 !    ...Get the external data.
 !
 !
-  call RuntimeParameters_get ("eos_useLogTables",   eos_useLogTables )
+!!$  call RuntimeParameters_get ("eos_useLogTables",   eos_useLogTables )
   call RuntimeParameters_get("eos_entrEleScaleChoice", eos_entrEleScaleChoice)
+  call RuntimeParameters_get("eos_gphFileName", eos_gphFileName)
 
 
-  ! LOOP # 0 - Allocation & zeroing of pointers
+  ! noLOOP # 0 - Allocation & zeroing of pointers
 
-  allocate(eos_allTab(NSPECIES))
-  do specno = 1,NSPECIES
+  allocate(theGphTable)
      do i = 1,EOS_TAB_NALLTAB
+        theGphTable%tg(i)%td%N        = 0 ! to change, seen below
+        theGphTable%tg(i)%td%ncorners = 0 ! to change, seen below
+        theGphTable%tg(i)%td%nderivs  = 0 ! to change, seen below
+        !nullify pointers for coordinate arrays
+        do ivi = 1,EOST_MAX_IVARS
+           theGphTable%tg(i)%td%c(ivi)%nIval = 0 ! to change seen below
+           nullify(theGphTable%tg(i)%td%c(ivi)%val)
+           theGphTable%tg(i)%td%c(ivi)%isLog = .FALSE.
+        end do
         !nullify pointers for tables of all types
-        nullify(eos_allTab(specno)%tg(i)%table)
-        nullify(eos_allTab(specno)%tg(i)%mgTable)
-        eos_allTab(specno)%tg(i)%numTables = 0 ! to change seen below
-        eos_allTab(specno)%tg(i)%td%ntemp = 0 ! to change seen below
-        eos_allTab(specno)%tg(i)%td%ndens = 0 ! to change seen below
-        eos_allTab(specno)%tg(i)%td%nmg = 0
-        nullify(eos_allTab(specno)%tg(i)%td%Temperatures)
-        nullify(eos_allTab(specno)%tg(i)%td%Densities)
-        if (i <= EOS_TABVT_PR .OR. i==EOS_TABVT_ENTR) then
-           eos_allTab(specno)%tg(i)%td%isLog = eos_useLogTables
-        else
-           eos_allTab(specno)%tg(i)%td%isLog = .FALSE.
-        end if
+        do j = LBOUND(theGphTable%tg(i)%table,1), &
+             UBOUND(theGphTable%tg(i)%table,1)
+           nullify(theGphTable % tg(1) % table(j)%table)
+           nullify(theGphTable % tg(1) % table(j)%ells)
+           nullify(theGphTable % tg(1) % table(j)%derDefs)
+        end do
+!!$        if (i==EOS_TABVT_ENTR) then
+!!$           theGphTable%tg(i)%td%isLog = eos_useLogTables
+!!$        else
+!!$           theGphTable%tg(i)%td%isLog = .FALSE.
+!!$        end if
      end do
-  end do
 !
 !
 !    ...Initialize all data to zero.
@@ -193,6 +197,7 @@ subroutine eos_initTabulated()
 !
 !
 
+  eos_type = EOS_TAB
 
 !
 !
@@ -200,87 +205,51 @@ subroutine eos_initTabulated()
 !       arrays.
 !
 !
-  ! LOOP # 1 - Get info from the Multispecies database that
+  ! noLOOP # 1 - Get info from the Multispecies database that
   ! used to be read from the EOS_sources file.
 
-  do specno = 1,eos_tabTotalNumSpecies
-
-     spec = SPECIES_BEGIN - 1 + specno
-
-     call Multispecies_getProperty (spec , MS_EOSTYPE    , eosType(specno))
-     call Multispecies_getProperty (spec , MS_EOSSUBTYPE , eosSubType(specno))
-     if (eosType(specno)==EOS_TAB) then
-        select case (eosSubType(specno))
-        case(4)
-           eos_tableKind(specno) = "IONMIX4"
-        case(6)
-           eos_tableKind(specno) = "IONMIX6"
-        case(1)
-           eos_tableKind(specno) = "IONMIX"
-        case(7)
-           eos_tableKind(specno) = "OPACPLOT"
-        case default
-           eos_tableKind(specno) = "???"
-        end select
-     else if (eosType(specno)==EOS_GAM) then
-           eos_tableKind(specno) = "???"
-     else
-           eos_tableKind(specno) = "???"
-     end if
+     eos_gphKind = "gphN"
      
-     isOpacplot  = (eosType(specno)==EOS_TAB .AND. eosSubType(specno)==7)
-     isIonmix4   = (eosType(specno)==EOS_TAB .AND. eosSubType(specno)==4)
-     isIonmix6   = (eosType(specno)==EOS_TAB .AND. eosSubType(specno)==6)
+     isOpacplot  = .FALSE.
+     isGpN   = .FALSE.
+     isIonmix6   = .FALSE.
 
-     if (eosType(specno)==EOS_TAB) then
-        eos_gphIonizationKind (:,specno) = EOS_TABULAR_Z
-        eos_gphIntEnergyKind (:,specno) = EOS_TABULAR_E
-        if (eosSubType(specno)==4 .or.eosSubType(specno)==6) then
-           eos_gphHeatCpKind (:,specno) = EOS_TABULAR_P
-        else
-           eos_gphHeatCpKind (:,specno) = EOS_TABULAR_C
-        end if
-     else
-        eos_gphIonizationKind (:,specno) = EOS_APPROX_KIN
-        eos_gphIntEnergyKind (:,specno) = EOS_APPROX_KIN
-        eos_gphHeatCpKind (:,specno) = EOS_APPROX_KIN
-     end if
+     eos_gphIonizationKind = EOS_APPROX_KIN
+     eos_gphIntEnergyKind = EOS_APPROX_KIN
+     eos_gphHeatCpKind = EOS_APPROX_KIN
 
-     call Multispecies_getProperty (spec , MS_EOSPRESFILE , eos_tableName(specno))
-     call Multispecies_getProperty (spec , MS_EOSGROUPNAME , eos_groupName(specno))
+  
 
-  end do
 !
 !
-  ! LOOP # 2 - Browse & Allocate
+  ! noLOOP # 2 - Browse & Allocate
   !
 !    ...Determine first the overall maximal dimensions needed for allocating
 !       the tables.
 !
 !    ...Allocate the tables and associated data for interpolation.
 !
-  do specno = 1,eos_tabTotalNumSpecies
 
-     isOpacplot  = (eos_tableKind(specno)=='OPACPLOT')
-     isIonmix4   = (eos_tableKind(specno)=='IONMIX4')
-     isIonmix6   = (eos_tableKind(specno)=='IONMIX6')
-     isIonmix4Like = (isIonmix4 .OR. isIonmix6)
+     isOpacplot  = (eos_gphKind=='OPACPLOT')
+     isGpN   = (eos_gphKind=='gphN')
+     isIonmix6   = (eos_gphKind=='IONMIX6')
+     isGpNLike = (isGpN .OR. isIonmix6)
 
-     needZFTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_Z) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_Z) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_Z) )
+     needZFTable  =     ((eos_gphIonizationKind == EOS_TABULAR_Z) &
+                    .or. (eos_gphIntEnergyKind == EOS_TABULAR_Z) &
+                    .or. (eos_gphHeatCpKind == EOS_TABULAR_Z) )
 
-     needENTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_E) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_E) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_E))
+     needENTable  =     ((eos_gphIonizationKind == EOS_TABULAR_E) &
+                    .or. (eos_gphIntEnergyKind == EOS_TABULAR_E) &
+                    .or. (eos_gphHeatCpKind == EOS_TABULAR_E))
 
-     needHCTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_C) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_C) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_C))!!!   .AND. .FALSE. !!!!!!
+     needHCTable  =     ((eos_gphIonizationKind == EOS_TABULAR_C) &
+                    .or. (eos_gphIntEnergyKind == EOS_TABULAR_C) &
+                    .or. (eos_gphHeatCpKind == EOS_TABULAR_C))!!!   .AND. .FALSE. !!!!!!
 
-     needPRTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_P) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_P) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_P))
+     needPRTable  =     ((eos_gphIonizationKind == EOS_TABULAR_P) &
+                    .or. (eos_gphIntEnergyKind == EOS_TABULAR_P) &
+                    .or. (eos_gphHeatCpKind == EOS_TABULAR_P))
 
      needEntrTable = isIonmix6
 
@@ -295,11 +264,11 @@ subroutine eos_initTabulated()
      if (needHCTable) op_maxTablesHC = op_maxTablesHC + 1
      if (needPRTable) op_maxTablesHC = op_maxTablesHC + 1
 
+#if 0
      if (needTable) then
 
-         call eos_tabBrowseTables (eos_tableKind (specno),      &
-                               eos_tableName (specno),      &
-                               eos_groupName (specno),      &
+         call eos_tabBrowseTables (eos_gphKind,      &
+                               eos_gphFileName,      &
                                needZFTable,                 &
                                needENTable,                 &
                                needHCTable,                 &
@@ -321,99 +290,99 @@ subroutine eos_initTabulated()
          op_maxNstepsTemperatureHC = max (nstepsTemperatureHC , op_maxNstepsTemperatureHC)
 
          if (needZFTable) then
-            eos_allTab(specno)%tg(EOS_TABVT_ZF)%td%ntemp = nstepsTemperatureZF
-            eos_allTab(specno)%tg(EOS_TABVT_ZF)%td%ndens = nstepsDensityZF
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_ZF)%td%Temperatures)
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_ZF)%td%Densities)
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_ZF)%td%Temperatures(nstepsTemperatureZF))
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_ZF)%td%Densities(nstepsDensityZF))
-            allocate(eos_allTab(specno)%tg(EOS_TABVT_ZF)%table(EOS_TAB_FOR_ELE:EOS_TAB_FOR_ELE))
-            eos_allTab(specno)%tg(EOS_TABVT_ZF)%numTables = 1
-            do i = LBOUND(eos_allTab(specno)%tg(EOS_TABVT_ZF)%table,1), &
-                 UBOUND(eos_allTab(specno)%tg(EOS_TABVT_ZF)%table,1)
-               nullify(eos_allTab(specno)%tg(EOS_TABVT_ZF)%table(i)%table)
-               eos_allTab(specno)%tg(EOS_TABVT_ZF)%table(i)%isLogData = .FALSE.
+            theGphTable%tg(EOS_TABVT_ZF)%td%ntemp = nstepsTemperatureZF
+            theGphTable%tg(EOS_TABVT_ZF)%td%ndens = nstepsDensityZF
+            nullify(theGphTable%tg(EOS_TABVT_ZF)%td%Temperatures)
+            nullify(theGphTable%tg(EOS_TABVT_ZF)%td%Densities)
+!!$            allocate(theGphTable%tg(EOS_TABVT_ZF)%td%Temperatures(nstepsTemperatureZF))
+!!$            allocate(theGphTable%tg(EOS_TABVT_ZF)%td%Densities(nstepsDensityZF))
+            allocate(theGphTable%tg(EOS_TABVT_ZF)%table(EOS_TAB_FOR_ELE:EOS_TAB_FOR_ELE))
+            theGphTable%tg(EOS_TABVT_ZF)%numTables = 1
+            do i = LBOUND(theGphTable%tg(EOS_TABVT_ZF)%table,1), &
+                 UBOUND(theGphTable%tg(EOS_TABVT_ZF)%table,1)
+               nullify(theGphTable%tg(EOS_TABVT_ZF)%table(i)%table)
+               theGphTable%tg(EOS_TABVT_ZF)%table(i)%isLogData = .FALSE.
             end do
          End if
          if (needENTable) then
-            eos_allTab(specno)%tg(EOS_TABVT_EN)%td%ntemp = nstepsTemperatureEN
-            eos_allTab(specno)%tg(EOS_TABVT_EN)%td%ndens = nstepsDensityEN
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_EN)%td%Temperatures)
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_EN)%td%Densities)
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_EN)%td%Temperatures(nstepsTemperatureEN))
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_EN)%td%Densities(nstepsDensityEN))
-            if (isIonmix4Like) then
-               allocate(eos_allTab(specno)%tg(EOS_TABVT_EN)%table(EOS_TAB_NCOMP))
-               eos_allTab(specno)%tg(EOS_TABVT_EN)%numTables = EOS_TAB_NCOMP
+            theGphTable%tg(EOS_TABVT_EN)%td%ntemp = nstepsTemperatureEN
+            theGphTable%tg(EOS_TABVT_EN)%td%ndens = nstepsDensityEN
+            nullify(theGphTable%tg(EOS_TABVT_EN)%td%Temperatures)
+            nullify(theGphTable%tg(EOS_TABVT_EN)%td%Densities)
+!!$            allocate(theGphTable%tg(EOS_TABVT_EN)%td%Temperatures(nstepsTemperatureEN))
+!!$            allocate(theGphTable%tg(EOS_TABVT_EN)%td%Densities(nstepsDensityEN))
+            if (isGpNLike) then
+               allocate(theGphTable%tg(EOS_TABVT_EN)%table(EOS_TAB_NCOMP))
+               theGphTable%tg(EOS_TABVT_EN)%numTables = EOS_TAB_NCOMP
             else
-               allocate(eos_allTab(specno)%tg(EOS_TABVT_EN)%table(EOS_TAB_FOR_MAT:EOS_TAB_FOR_MAT))
-               eos_allTab(specno)%tg(EOS_TABVT_EN)%numTables = 1 
+               allocate(theGphTable%tg(EOS_TABVT_EN)%table(EOS_TAB_FOR_MAT:EOS_TAB_FOR_MAT))
+               theGphTable%tg(EOS_TABVT_EN)%numTables = 1 
             end if
-            do i = LBOUND(eos_allTab(specno)%tg(EOS_TABVT_EN)%table,1), &
-                 UBOUND(eos_allTab(specno)%tg(EOS_TABVT_EN)%table,1)
-               nullify(eos_allTab(specno)%tg(EOS_TABVT_EN)%table(i)%table)
-               eos_allTab(specno)%tg(EOS_TABVT_EN)%table(i)%isLogData = .FALSE.
+            do i = LBOUND(theGphTable%tg(EOS_TABVT_EN)%table,1), &
+                 UBOUND(theGphTable%tg(EOS_TABVT_EN)%table,1)
+               nullify(theGphTable%tg(EOS_TABVT_EN)%table(i)%table)
+               theGphTable%tg(EOS_TABVT_EN)%table(i)%isLogData = .FALSE.
             end do
          end if
          if (needHCTable) then
-            eos_allTab(specno)%tg(EOS_TABVT_HC)%td%ntemp = nstepsTemperatureHC
-            eos_allTab(specno)%tg(EOS_TABVT_HC)%td%ndens = nstepsDensityHC
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_HC)%td%Temperatures)
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_HC)%td%Densities)
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_HC)%td%Temperatures(nstepsTemperatureHC))
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_HC)%td%Densities(nstepsDensityHC))
-            allocate(eos_allTab(specno)%tg(EOS_TABVT_HC)%table(EOS_TAB_NCOMP))
-            eos_allTab(specno)%tg(EOS_TABVT_HC)%numTables = EOS_TAB_NCOMP
-            do i = LBOUND(eos_allTab(specno)%tg(EOS_TABVT_HC)%table,1), &
-                 UBOUND(eos_allTab(specno)%tg(EOS_TABVT_HC)%table,1)
-               nullify(eos_allTab(specno)%tg(EOS_TABVT_HC)%table(i)%table)
-               eos_allTab(specno)%tg(EOS_TABVT_HC)%table(i)%isLogData = .FALSE.
+            theGphTable%tg(EOS_TABVT_HC)%td%ntemp = nstepsTemperatureHC
+            theGphTable%tg(EOS_TABVT_HC)%td%ndens = nstepsDensityHC
+            nullify(theGphTable%tg(EOS_TABVT_HC)%td%Temperatures)
+            nullify(theGphTable%tg(EOS_TABVT_HC)%td%Densities)
+!!$            allocate(theGphTable%tg(EOS_TABVT_HC)%td%Temperatures(nstepsTemperatureHC))
+!!$            allocate(theGphTable%tg(EOS_TABVT_HC)%td%Densities(nstepsDensityHC))
+            allocate(theGphTable%tg(EOS_TABVT_HC)%table(EOS_TAB_NCOMP))
+            theGphTable%tg(EOS_TABVT_HC)%numTables = EOS_TAB_NCOMP
+            do i = LBOUND(theGphTable%tg(EOS_TABVT_HC)%table,1), &
+                 UBOUND(theGphTable%tg(EOS_TABVT_HC)%table,1)
+               nullify(theGphTable%tg(EOS_TABVT_HC)%table(i)%table)
+               theGphTable%tg(EOS_TABVT_HC)%table(i)%isLogData = .FALSE.
             end do
          end if
          if (needPRTable) then
-            eos_allTab(specno)%tg(EOS_TABVT_PR)%td%ntemp = nstepsTemperatureHC !DEV: ??
-            eos_allTab(specno)%tg(EOS_TABVT_PR)%td%ndens = nstepsDensityHC !DEV: ??
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_PR)%td%Temperatures)
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_PR)%td%Densities)
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_PR)%td%Temperatures(nstepsTemperatureHC))
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_PR)%td%Densities(nstepsDensityHC))
+            theGphTable%tg(EOS_TABVT_PR)%td%ntemp = nstepsTemperatureHC !DEV: ??
+            theGphTable%tg(EOS_TABVT_PR)%td%ndens = nstepsDensityHC !DEV: ??
+            nullify(theGphTable%tg(EOS_TABVT_PR)%td%Temperatures)
+            nullify(theGphTable%tg(EOS_TABVT_PR)%td%Densities)
+!!$            allocate(theGphTable%tg(EOS_TABVT_PR)%td%Temperatures(nstepsTemperatureHC))
+!!$            allocate(theGphTable%tg(EOS_TABVT_PR)%td%Densities(nstepsDensityHC))
 
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_PR)%table(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE))
-            if (isIonmix4Like) then
-               allocate(eos_allTab(specno)%tg(EOS_TABVT_PR)%table(EOS_TAB_NCOMP))
-               eos_allTab(specno)%tg(EOS_TABVT_PR)%numTables = EOS_TAB_NCOMP
+!!$            allocate(theGphTable%tg(EOS_TABVT_PR)%table(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE))
+            if (isGpNLike) then
+               allocate(theGphTable%tg(EOS_TABVT_PR)%table(EOS_TAB_NCOMP))
+               theGphTable%tg(EOS_TABVT_PR)%numTables = EOS_TAB_NCOMP
             else
-               allocate(eos_allTab(specno)%tg(EOS_TABVT_PR)%table(EOS_TAB_FOR_MAT:EOS_TAB_FOR_MAT))
-               eos_allTab(specno)%tg(EOS_TABVT_PR)%numTables = 1 
+               allocate(theGphTable%tg(EOS_TABVT_PR)%table(EOS_TAB_FOR_MAT:EOS_TAB_FOR_MAT))
+               theGphTable%tg(EOS_TABVT_PR)%numTables = 1 
             end if
-!!$            eos_allTab(specno)%tg(EOS_TABVT_PR)%numTables = EOS_TAB_FOR_ELE - EOS_TAB_FOR_ION + 1
-            do i = LBOUND(eos_allTab(specno)%tg(EOS_TABVT_PR)%table,1), &
-                 UBOUND(eos_allTab(specno)%tg(EOS_TABVT_PR)%table,1)
-               nullify(eos_allTab(specno)%tg(EOS_TABVT_PR)%table(i)%table)
-               eos_allTab(specno)%tg(EOS_TABVT_PR)%table(i)%isLogData = .FALSE.
+!!$            theGphTable%tg(EOS_TABVT_PR)%numTables = EOS_TAB_FOR_ELE - EOS_TAB_FOR_ION + 1
+            do i = LBOUND(theGphTable%tg(EOS_TABVT_PR)%table,1), &
+                 UBOUND(theGphTable%tg(EOS_TABVT_PR)%table,1)
+               nullify(theGphTable%tg(EOS_TABVT_PR)%table(i)%table)
+               theGphTable%tg(EOS_TABVT_PR)%table(i)%isLogData = .FALSE.
             end do
          end if
          if (needEntrTable) then
-            eos_allTab(specno)%tg(EOS_TABVT_ENTR)%td%ntemp = nstepsTemperatureEntr
-            eos_allTab(specno)%tg(EOS_TABVT_ENTR)%td%ndens = nstepsDensityEntr
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%td%Temperatures)
-            nullify(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%td%Densities)
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%td%Temperatures(nstepsTemperatureEntr))
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%td%Densities(nstepsDensityEntr))
+            theGphTable%tg(EOS_TABVT_ENTR)%td%ntemp = nstepsTemperatureEntr
+            theGphTable%tg(EOS_TABVT_ENTR)%td%ndens = nstepsDensityEntr
+            nullify(theGphTable%tg(EOS_TABVT_ENTR)%td%Temperatures)
+            nullify(theGphTable%tg(EOS_TABVT_ENTR)%td%Densities)
+!!$            allocate(theGphTable%tg(EOS_TABVT_ENTR)%td%Temperatures(nstepsTemperatureEntr))
+!!$            allocate(theGphTable%tg(EOS_TABVT_ENTR)%td%Densities(nstepsDensityEntr))
 
-!!$            allocate(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%table(EOS_TAB_FOR_ELE))
-            allocate(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%table(EOS_TAB_FOR_ELE:EOS_TAB_FOR_ELE))
-            eos_allTab(specno)%tg(EOS_TABVT_ENTR)%numTables = 1
-            do i = LBOUND(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%table,1), &
-                 UBOUND(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%table,1)
-               nullify(eos_allTab(specno)%tg(EOS_TABVT_ENTR)%table(i)%table)
-               eos_allTab(specno)%tg(EOS_TABVT_ENTR)%table(i)%isLogData = .FALSE.
+!!$            allocate(theGphTable%tg(EOS_TABVT_ENTR)%table(EOS_TAB_FOR_ELE))
+            allocate(theGphTable%tg(EOS_TABVT_ENTR)%table(EOS_TAB_FOR_ELE:EOS_TAB_FOR_ELE))
+            theGphTable%tg(EOS_TABVT_ENTR)%numTables = 1
+            do i = LBOUND(theGphTable%tg(EOS_TABVT_ENTR)%table,1), &
+                 UBOUND(theGphTable%tg(EOS_TABVT_ENTR)%table,1)
+               nullify(theGphTable%tg(EOS_TABVT_ENTR)%table(i)%table)
+               theGphTable%tg(EOS_TABVT_ENTR)%table(i)%isLogData = .FALSE.
             end do
          end if
 
      end if
+#endif
 
-  end do
 !
 !
 !    ...Close the 'EOS_sources.txt' file.
@@ -465,34 +434,17 @@ subroutine eos_initTabulated()
 !
 !
 
-  ! LOOP # 3 - Actually call eos_gphReadTables with appropriate arguments
+  ! noLOOP # 3 - Actually call eos_gphReadTables with appropriate arguments
   ! to get the table data that will be needed into memory.
   !
-  do specno = 1,eos_tabTotalNumSpecies
 
      wanted = .FALSE.
-     isOpacplot = (eos_tableKind(specno)=='OPACPLOT')
-     isIonmix4 = (eos_tableKind(specno)=='IONMIX4')
-     isIonmix6 = (eos_tableKind(specno)=='IONMIX6')
-     isIonmix4Like = (isIonmix4 .OR. isIonmix6)
+     isOpacplot = (eos_gphKind=='OPACPLOT')
+     isGpN = (eos_gphKind=='GPN')
+     isIonmix6 = (eos_gphKind=='IONMIX6')
+     isGpNLike = (isGpN .OR. isIonmix6)
 
-     needZFTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_Z) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_Z) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_Z))
-
-     needENTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_E) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_E) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_E))
-
-     needHCTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_C) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_C) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_C))!!!   .AND. .FALSE. !!!!!!
-
-     needPRTable  =  ANY((eos_gphIonizationKind (:,specno) == EOS_TABULAR_P) &
-                    .or. (eos_gphIntEnergyKind   (:,specno) == EOS_TABULAR_P) &
-                    .or. (eos_gphHeatCpKind  (:,specno) == EOS_TABULAR_P))
-
-     needEntrTable = isIonmix6
+     needEntrTable = .TRUE.
 
      needTable    =       needZFTable &
                     .or.  needENTable &
@@ -500,84 +452,40 @@ subroutine eos_initTabulated()
                     .or.  needPRTable &
                     .or.  needEntrTable
 
+#ifdef SUPPRESS_OLD4
      if (needZFTable) then
          wanted(EOS_TAB_FOR_ELE,EOS_TABVT_ZF) = .TRUE.
      end if
 
      if (needENTable) then
-         if (isIonmix4Like) then
-            wanted(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_EN) = .TRUE.
-         else
-            wanted(EOS_TAB_FOR_MAT,EOS_TABVT_EN) = .TRUE.
-         end if
+        wanted(EOS_TAB_FOR_MAT,EOS_TABVT_EN) = .TRUE.
      end if
-
-     if (needHCTable .OR. needPRTable) then
-     end if
-     if (needHCTable) then
-        if (isIonmix4Like) then
-           wanted(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_HC) = .TRUE.
-        else
-           wanted(EOS_TAB_FOR_MAT,EOS_TABVT_HC) = .TRUE.
-        end if
-     end if
-     if (needPRTable) then
-        if (isIonmix4Like) then
-           wanted(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_PR) = .TRUE.
-        else
-           wanted(EOS_TAB_FOR_MAT,EOS_TABVT_PR) = .TRUE.
-        end if
-!!$         wanted(EOS_TAB_FOR_ELE,EOS_TABVT_PR) = .TRUE.
-     end if
-
-     if (needEntrTable) then
-        wanted(EOS_TAB_FOR_ELE,EOS_TABVT_ENTR) = .TRUE.
-     end if
-
-
-#if(0)
-     ! Currently done in Multispecies_init - KW
-     if (needZFTable) &
-          call Multispecies_setProperty (SPECIES_BEGIN - 1 + specno , MS_EOSZFREEFILE , eos_tableName(specno))
-     if (needENTable) &
-          call Multispecies_setProperty (SPECIES_BEGIN - 1 + specno , MS_EOSENERFILE , eos_tableName(specno))
-     if (needPRTable) &
-          call Multispecies_setProperty (SPECIES_BEGIN - 1 + specno , MS_EOSPRESFILE , eos_tableName(specno))
-     if (isIonmix4) then
-        call Multispecies_setProperty (SPECIES_BEGIN - 1 + specno , MS_EOSSUBTYPE , 4)
-     else if (isOpacplot) then
-        call Multispecies_setProperty (SPECIES_BEGIN - 1 + specno , MS_EOSSUBTYPE , 7)
-     if (isIonmix6) then
-        call Multispecies_setProperty (SPECIES_BEGIN - 1 + specno , MS_EOSSUBTYPE , 6)
-     else
-        call Multispecies_setProperty (SPECIES_BEGIN - 1 + specno , MS_EOSSUBTYPE , 1)
-     end if
-#endif
 
 
      nullify(temperatures)
      nullify(densities)
+#endif
+     if (needEntrTable) then
+        wanted(EOS_TAB_FOR_MAT,EOS_TABVT_ENTR) = .TRUE.
+     end if
 
      if (needTable) then
 
         if(eos_meshMe < 4) then
-           print *, "in eos_inittabulated, tableName = ", trim(eos_tableName(specno))
-           print *, "in eos_inittabulated, groupName = ", trim(eos_groupName(specno))
+           print *, "in eos_inittabulated, tableName = ", trim(eos_gphFileName)
         end if
 
-        call eos_gphReadTables (eos_tableKind (specno), &
-                                eos_tableName (specno), &
-                                eos_groupName (specno), &
+!!$        call eos_gphReadTables (eos_gphKind, &
+!!$                                eos_gphFileName, &
+!!$                                wanted,                 &
+!!$                                theGphTable%tg(:)%td, &
+!!$                                theGphTable%tg(EOS_TABVT_ENTR)%table(EOS_TAB_FOR_MAT))
+        call eos_gphReadGpNTables (eos_gphFileName, &
                                 wanted,                 &
-                                eos_allTab(specno)%tg(:)%td, &
-                                eos_allTab(specno)%tg(EOS_TABVT_ZF)%table, &
-                                eos_allTab(specno)%tg(EOS_TABVT_EN)%table, &
-                                eos_allTab(specno)%tg(EOS_TABVT_PR)%table, & 
-                                eos_allTab(specno)%tg(EOS_TABVT_HC)%table, &
-                                eos_allTab(specno)%tg(EOS_TABVT_ENTR)%table)
+                                theGphTable%tg(:)%td, &
+                                theGphTable%tg(EOS_TABVT_ENTR)%table)
      end if
 
-  end do
 !
 !
 !    DEV: ?? ...Print out the EOS data constants to see what has been stored.
@@ -602,6 +510,7 @@ subroutine eos_initTabulated()
 !
 !
 
+#if 0
   if ( eos_globalMe == MASTER_PE ) then
 
      fileUnit = ut_getFreeFileUnit ()
@@ -618,27 +527,26 @@ subroutine eos_initTabulated()
 
      call eos_tabWriteTables (fileUnit,printoutHeader)
 
-     write(fileUnit,FMT='(/4x,"Multispecies_list REPRISE"/)')
-     call Multispecies_list(fileUnit)
 
      close (fileUnit)
 
   end if
+#endif
 
   ! LOOP # 4 - Initialize for EOS table diagnostics.
   !
-  allocate(eos_gphAllDiag(NSPECIES))
-  do specno = 1,NSPECIES
-     eos_gphAllDiag(specno)%highTempCount = 0
-     eos_gphAllDiag(specno)%highDensCount = 0
-     eos_gphAllDiag(specno)%highestTemp = -999.0
-     eos_gphAllDiag(specno)%highestDens = -999.0
-     eos_gphAllDiag(specno)%highTempVarsLookedUp(:) = .FALSE.
-     eos_gphAllDiag(specno)%highDensVarsLookedUp(:) = .FALSE.
-     eos_gphAllDiag(specno)%firstHighTempEvent%temp = -999.0
-     eos_gphAllDiag(specno)%firstHighTempEvent%dens = -999.0
-     eos_gphAllDiag(specno)%firstHighDensEvent%temp = -999.0
-     eos_gphAllDiag(specno)%firstHighDensEvent%dens = -999.0
+  allocate(eos_gphAllDiag(EOS_GPH_NALLTAB))
+  do tabno = 1,EOS_GPH_NALLTAB
+     eos_gphAllDiag(tabno)%highTempCount = 0
+     eos_gphAllDiag(tabno)%highDensCount = 0
+     eos_gphAllDiag(tabno)%highestTemp = -999.0
+     eos_gphAllDiag(tabno)%highestDens = -999.0
+     eos_gphAllDiag(tabno)%highTempVarsLookedUp(:) = .FALSE.
+     eos_gphAllDiag(tabno)%highDensVarsLookedUp(:) = .FALSE.
+     eos_gphAllDiag(tabno)%firstHighTempEvent%temp = -999.0
+     eos_gphAllDiag(tabno)%firstHighTempEvent%dens = -999.0
+     eos_gphAllDiag(tabno)%firstHighDensEvent%temp = -999.0
+     eos_gphAllDiag(tabno)%firstHighDensEvent%dens = -999.0
   end do
   
 !
