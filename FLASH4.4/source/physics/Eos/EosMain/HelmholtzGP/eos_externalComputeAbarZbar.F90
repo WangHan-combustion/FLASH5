@@ -6,14 +6,14 @@
 !!
 !! SYNOPSIS
 !!
-!!  call eos_externalComputeAbarZbar(real(in), dimension(:,:)  :: solnscalars,
-!!                                   real(out), dimension(:)  :: abardata,
-!!                                   real(out), dimension(:)  :: zbardata)
+!!  call eos_externalComputeAbarZbar(real(in), dimension(:,:)  :: solnScalars,
+!!                                   real(out), dimension(:)  :: abarData,
+!!                                   real(out), dimension(:)  :: zbarData)
 !!
 !! DESCRIPTION
 !!
 !! Dean Townsley 2008
-!! Klaus Weide   2013
+!! Klaus Weide   2013, 2018
 !!
 !!  This routine private to the Eos unit serves to implement callbacks
 !!  for the Eos/Helmholtz/ExternelAbarZbar EOS implementation.
@@ -27,11 +27,11 @@
 !!
 !! ARGUMENTS
 !!
-!!   solnscalars : scalars of the solution 
+!!   solnScalars : scalars of the solution
 !!
-!!   abardata : abar info
+!!   abarData : abar info
 !!
-!!   zbardata : zbar info
+!!   zbarData : zbar info
 !!
 !!
 !!
@@ -56,8 +56,10 @@ subroutine eos_externalComputeAbarZbar(solnScalars, abarData, zbarData)
 #else
   abarData(:) = eos_singleSpeciesA
   zbarData(:) = eos_singleSpeciesZ
+#ifdef DEBUG_EOS
   print*,'abarData:',abarData
   print*,'zbarData:',zbarData
+#endif
 #endif
      if ( .not. (zbarData(1) > 0.0 ) ) then
         !print but don't die, EOS will die and report density and temperature
