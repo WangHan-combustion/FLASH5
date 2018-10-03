@@ -62,7 +62,7 @@ subroutine eos_gphGetTabulatedData (xpos,   &
 #include "Eos.h"
   
 !!$  integer, intent(in) :: derDefs(EOST_MAX_IVARS,EOST_MAX_DERIVS)
-  integer, intent(in) :: derDefs(:,:)
+  integer, intent(in) :: derDefs(:,0:)
   logical, intent(in) :: wantedTabDeriv(EOST_MAX_DERIVS,EOS_TAB_NCOMP)
   integer,allocatable:: wantedDerivs(:,:)
   real,intent(OUT) :: outData(0:EOST_MAX_DERIVS,1:EOS_TABVT_ENTR,EOS_TAB_NCOMP)
@@ -79,6 +79,7 @@ subroutine eos_gphGetTabulatedData (xpos,   &
   integer :: iposPrev(EOST_MAX_IVARS)
   integer :: varType
   integer :: numDerivs
+  integer :: i
   integer,save :: iSave(EOST_MAX_IVARS)=1
 
   real :: taus(EOST_MAX_IVARS)
@@ -97,6 +98,9 @@ subroutine eos_gphGetTabulatedData (xpos,   &
 
   varType = EOS_TABVT_ENTR
 
+  print*,'taus',taus
+  print*,'clo',clo,', chi',chi
+
   thisTypeTable => eos_gphTheTable%tg(varType)
   isLog1 = thisTypeTable%td%c(ENER_IVAR)%isLog
   isLog2 = thisTypeTable%td%c(DENS_IVAR)%isLog
@@ -112,10 +116,25 @@ subroutine eos_gphGetTabulatedData (xpos,   &
   numDerivs = 0
   if (wantedTabDeriv(EOS_GPHDERIV_E  ,EOS_TAB_FOR_MAT)) numDerivs = 1
   if (wantedTabDeriv(EOS_GPHDERIV_D  ,EOS_TAB_FOR_MAT)) numDerivs = numDerivs + 1
-  if (wantedTabDeriv(EOS_GPHDERIV_E  ,EOS_TAB_FOR_MAT)) numDerivs = numDerivs + 1
+  if (wantedTabDeriv(EOS_GPHDERIV_E2 ,EOS_TAB_FOR_MAT)) numDerivs = numDerivs + 1
 
   allocate(wantedDerivs(EOST_MAX_IVARS,numDerivs))
-!
+  wantedDerivs(:,:) = 0
+
+  i = 0
+  if (wantedTabDeriv(EOS_GPHDERIV_E  ,EOS_TAB_FOR_MAT)) then
+     i = 1
+     wantedDerivs(:,i) = derDefs(:,EOS_GPHDERIV_E)
+  end if
+  if (wantedTabDeriv(EOS_GPHDERIV_D  ,EOS_TAB_FOR_MAT)) then
+     i = i + 1
+     wantedDerivs(:,i) = derDefs(:,EOS_GPHDERIV_D)
+  end if
+  if (wantedTabDeriv(EOS_GPHDERIV_E2 ,EOS_TAB_FOR_MAT)) then
+     i = i + 1
+     wantedDerivs(:,i) = derDefs(:,EOS_GPHDERIV_E2)
+  end if
+
 !
 !   ...Extract only the necessary variables from the tables.
 !
@@ -180,6 +199,14 @@ subroutine eos_gphGetTabulatedData (xpos,   &
 
   if (ANY(wantedDerivs(:,EOS_TABVT_ENTR) .GE. 0)) then
 
+
+     do i=lbound(wantedDerivs,2),ubound(wantedDerivs,2)
+        outData(i,1:EOS_TABVT_ENTR,EOS_TAB_NCOMP) = 100 + i
+     end do
+     do i=0,EOST_MAX_DERIVS
+        outData(i,1:EOS_TABVT_ENTR,EOS_TAB_NCOMP) = 200 + i
+     end do
+     print*,'gphGeTabulatedData: sought xpos is',xpos
       call eos_gphGetAnyTableData (xpos,            &
                                         wantedComp,&
                                         EOS_TABULAR_S,      &

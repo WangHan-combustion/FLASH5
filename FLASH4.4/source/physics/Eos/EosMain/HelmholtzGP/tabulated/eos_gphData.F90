@@ -144,9 +144,10 @@ module eos_gphData
 
 
   ! Derivate definitions for expressing which derivatirs are "wanted"
-  integer,dimension(EOST_MAX_IVARS, EOST_MAX_DERIVS),save :: eos_gphDerDefs
+  integer,dimension(EOST_MAX_IVARS, 0:EOST_MAX_DERIVS),save :: eos_gphDerDefs
 
-  data eos_gphDerDefs /1,0,0,0, &
+  data eos_gphDerDefs /0,0,0,0, &
+                       1,0,0,0, &
                        0,1,0,0, &
                        1,1,0,0, &
                        2,0,0,0, &

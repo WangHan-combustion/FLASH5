@@ -39,7 +39,7 @@
 subroutine eos_gphGetAnyTableData (xpos,            &
                                         wanted, &
                                         selTT,              &
-                                        derDefs,         &
+                                        derDefsIn,         &
                                         needDerivs,         &
                                         ipos,         &
                                         tausIn, &
@@ -52,7 +52,6 @@ subroutine eos_gphGetAnyTableData (xpos,            &
   use Eos_data,         ONLY : eos_meshMe
   use eos_gphData,      ONLY : one,ten,                    &
                                EOS_TAB_NCOMP,              &
-                               EOS_TAB_FOR_MAT,              &
                                EOS_TABINT_DERIV_0,         &
                                EOS_TABINT_DERIV_DT,        &
                                EOS_TABINT_DERIV_DD,        &
@@ -72,11 +71,12 @@ subroutine eos_gphGetAnyTableData (xpos,            &
   real,    intent (in)  :: xpos(EOST_MAX_IVARS)
   logical,            intent (in) :: wanted(EOS_TAB_NCOMP)
   integer, intent (in)  :: selTT
-  integer, intent (in)  :: derDefs(:,:)
+  integer, intent (in)  :: derDefsIn(:,0:)
   integer, intent (in)  :: needDerivs(:,:)
   real,    intent (out) :: resultTT(0:,:)
 
   type(eosT_varTableGroupT),pointer :: thisTypeTable
+  integer, pointer      :: derDefs(:,:)
 
   logical,intent(IN) :: lowerBoundary(1:EOST_MAX_IVARS)
   logical :: upperBoundary(1:EOST_MAX_IVARS)
@@ -86,7 +86,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
   integer :: d,t
   integer :: ivi,      iw,ix,iy,iz
   integer :: tableDim, nw,nx,ny,nz
-  integer :: ic, ib, der, wrtVar
+  integer :: ic, ib, der, derW, wrtVar, degW
   integer,intent(IN) :: ipos(EOST_MAX_IVARS)
   integer :: varType
   integer :: ncorners
@@ -102,7 +102,8 @@ subroutine eos_gphGetAnyTableData (xpos,            &
   real :: f1,f2,f3,f4
   real :: o1,o2,o3,o4
   real,allocatable :: o(:,:)
-  real,allocatable :: f(:,:)
+  real,allocatable :: f(:,:,:)
+  real :: r
   real :: expo1(0:1, EOST_MAX_IVARS)
   real :: speciesDensityTT
   real :: speciesTemperatureTT
@@ -208,6 +209,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
 !!$     o3 = thisTypeTable%table(g)%table(j,k)
 !!$     o4 = thisTypeTable%table(g)%table(j,l)
 
+     print*,'gphGetAnyTableData: sought ipos is',ipos
      ncorners = thisTypeTable % td % ncorners
      nderivs  = thisTypeTable % td % nderivs
      allocate(o(0:ncorners-1, 0:nderivs))
@@ -215,6 +217,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
        do der=0,nderivs
           do ic=0,ncorners-1
              o(ic, der) = d (ic, der, ipos(1), ipos(2), ipos(3), ipos(4) )
+             print*,'ic,der, o:',ic,der,o(ic, der)
           end do
        end do
      End associate
@@ -310,7 +313,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
 
 
      associate (tableDim => thisTypeTable % td % n, &
-          ell => thisTypeTable % table(EOS_TAB_FOR_MAT) &
+          ell => thisTypeTable % table(g) &
           % ells(:,ipos(1),ipos(2),ipos(3),ipos(4)) )
      nw = 1; nx = 1; ny = 1; nz = 1
      if (tableDim < 1) nw = 0
@@ -318,49 +321,68 @@ subroutine eos_gphGetAnyTableData (xpos,            &
      if (tableDim < 3) ny = 0
      if (tableDim < 4) nz = 0
 
-
+     print*,'ells:',thisTypeTable % table(g) % ells
+     print*,'ell :',ell
      expo1(:,:) = 1.0
      do ivi = 1, tableDim
         ellReno = ell(ivi) / (clohi(ivi,1) - clohi(ivi,0))
         ellFact = 1.0 / ellReno
-        expo1(0, ivi) = exp(0.5 * (ellFact *      taus(ivi) )**2)
-        expo1(1, ivi) = exp(0.5 * (ellFact * (1.0-taus(ivi)))**2)
+        print*,'ellerie:',ell(ivi) , (clohi(ivi,1) - clohi(ivi,0)),ellReno,ellFact
+        expo1(0, ivi) = exp(-0.5 * (ellFact *      taus(ivi) )**2)
+        expo1(1, ivi) = exp(-0.5 * (ellFact * (1.0-taus(ivi)))**2)
+        print*,'ivi, expo1(0:1,ivi):',ivi, expo1(0:1,ivi)
      end do
 
-     allocate(f(0:ncorners-1,0:nderivs))
+   derDefs => thisTypeTable % table(g) % derDefs
+   print*,'lbound(needDerivs):',lbound(needDerivs)
+   print*,'ubound(needDerivs):',ubound(needDerivs)
+   print*,'lbound( derDefs  ):',lbound( derDefs  )
+   print*,'ubound( derDefs  ):',ubound( derDefs  )
      nderiW = size(needDerivs,2)
+     allocate(f(0:ncorners-1,0:nderivs,0:nderiW))
 !!$     allocate(result(0:nderiW))
 
      do iz=0,nz
         do iy=0,ny
            do ix=0,nx
               do iw=0,nw
-                 ic = iw + 2 * (iz + 2 * (iy + 2*iz))
-                 f(ic,0) = expo1(iw,1) * expo1(ix,2) * expo1(iy,3) * expo1(iz,4)
+                 ic = iw + 2 * (ix + 2 * (iy + 2*iz))
+                 f(ic,0,0) = expo1(iw,1) * expo1(ix,2) * expo1(iy,3) * expo1(iz,4)
  
-                 do der=1,nderivs
-                    f(ic,der) = f(ic,0)
-                    do wrtVar = 1,tableDim
-                       associate ( degree => derDefs(wrtVar,der) )
-                         if (degree > 0) then
-                            ib = ibits(ic, wrtVar, 1)
-                            select case (degree)
-                            case(1)
+                 do derW=0,nderiW
+                    do der=0,nderivs
+                       f(ic,der,derW) = f(ic,0,0)
+                       if (derW+der == 0) CYCLE
+                       do wrtVar = 1,tableDim
+                          associate ( degree => derDefs   (wrtVar,der ) )
+                            degW = 0
+                            if (derW > 0) degW = needDerivs(wrtVar,derW)
+
+                            if (degW+degree > 0) then
+                               ib = ibits(ic, wrtVar-1, 1)
+                               select case (degW+degree)
+                               case(1)
 !!$                               fact = (chi(wrtVar) - clo(wrtVar)) / ell(wrtVar)**2
 !!$                               fact = fact * (-1)**ib
-                               fact = (xpos(wrtVar) - clohi(wrtVar,ib)) / ell(wrtVar)**2
-                            case(2)
+                                  fact = (xpos(wrtVar) - clohi(wrtVar,ib)) / ell(wrtVar)**2
+!!$                                  print*,'...derW,der,wrtVar,xpos(wrtVar),ib,clohi(wrtVar,ib):', &
+!!$                                       derW,der,wrtVar,xpos(wrtVar),ib,clohi(wrtVar,ib),'->',fact
+                                  fact = fact * (-1)**degW
+                               case(2)
 !!$                               fact = (chi(wrtVar) - clo(wrtVar)) / ell(wrtVar)**2
 !!$                               fact = fact**2 - 1. / ell(wrtVar)**2
-                               fact = ((xpos(wrtVar) - clohi(wrtVar,ib))**2 - ell(wrtVar)**2) / &
-                                                                              ell(wrtVar)**4
-                            case default
-                               print*,'der,wrtVar,degree,derDefs',der,wrtVar,degree,derDefs
-                               call Driver_abortFlash("derivative degree is too high!")
-                            end select
-                            f(ic,der) = f(ic,der) * fact
-                         end if
-                       end associate
+                                  fact = ((xpos(wrtVar) - clohi(wrtVar,ib))**2 - ell(wrtVar)**2) / &
+                                                                                 ell(wrtVar)**4
+                                  fact = fact * (-1)**degW
+                               case default
+                                  print*,'derW,der,wrtVar,degW,degree,fact,derDefs:',needDerivs(:,derW),derDefs(:,der)
+                                  print*, derW,der,wrtVar,degW,degree,fact,derDefs
+                                  call Driver_abortFlash("derivative degree is too high!")
+                               end select
+                               f(ic,der,derW) = f(ic,der,derW) * fact
+                            end if
+                          end associate
+                       end do
                     end do
                  end do
 
@@ -372,10 +394,23 @@ subroutine eos_gphGetAnyTableData (xpos,            &
    end associate
 
 
+   print*,'lbound(o):',lbound(o)
+   print*,'ubound(o):',ubound(o)
+   print*,'lbound(f):',lbound(f)
+   print*,'ubound(f):',ubound(f)
+   
+   do derW=0,nderiW
+      r = 0.0
+      do der=0,nderivs
+         do ic=0,ncorners-1
+            r = r + o(ic,der) * f(ic,der,derW) 
+            print*,'...just added o*f; ic,der,derW,g=',ic,der,derW,g,', o,f=', o(ic,der),f(ic,der,derW)
+         end do
+      end do
+      resultTT(derW, g) = r !DOT_PRODUCT(o,f)
+   end do
 
-
-
-     resultTT(EOS_TABINT_DERIV_0,g) = o1 * f1 + o2 * f2 + o3 * f3 + o4 * f4
+!!$     resultTT(EOS_TABINT_DERIV_0,g) = 0 !DOT_PRODUCT(o,f)
      !   ...Convert logarithmic form to real form (if needed).
      if (eos_useLogTables) then
         resultTT(EOS_TABINT_DERIV_0,g) = ten ** resultTT(EOS_TABINT_DERIV_0,g)
@@ -427,6 +462,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
      end if
 #endif
   end do                        ! do g
+  print*,'At ',xpos,', returning',resultTT
 !
 !
 !

@@ -138,7 +138,7 @@ end subroutine eos_gphFindTablePos
                              EOST_MAX_DERIVS
        implicit none
        real,    intent (in)  :: xpos(EOST_MAX_IVARS)
-       integer, intent (in)  :: derDefs(:,:)
+       integer, intent (in)  :: derDefs(:,0:)
        logical, intent(in) :: wantedTabDeriv(EOST_MAX_DERIVS,EOS_TAB_NCOMP)
 !!$       integer, intent (in) :: wantedDerivs(EOS_TAB_NCOMP,EOS_GPH_NALLTAB)
        real,intent(OUT) :: outData(0:EOST_MAX_DERIVS,1:EOS_TABVT_ENTR,EOS_TAB_NCOMP)

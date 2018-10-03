@@ -318,6 +318,7 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
   end if
 #endif
 
+  wantedEntrTabDeriv(:,:) = .FALSE.
 !!$!!  wanted(:,:) = .FALSE.
 !!$!!  wanted(EOS_TAB_FOR_ELE,EOS_TABVT_ZF) = .TRUE.
   neededTabDerivs(:,:) = -1        !By default we do not even need "zeroth deriv", i.w., table function itself.
@@ -383,12 +384,13 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
      wantedEntrTabDeriv(EOS_GPHDERIV_E  ,EOS_TAB_FOR_MAT) = .TRUE. !for T
      wantedEntrTabDeriv(EOS_GPHDERIV_D  ,EOS_TAB_FOR_MAT) = .TRUE. !for P
   end if
+     wantedEntrTabDeriv(EOS_GPHDERIV_E  ,EOS_TAB_FOR_MAT) = .TRUE. !for T
 
   maxDerivsE = 0
   if(maskPtr(EOS_DET).OR. .TRUE.) then
      maxDerivsE = 1
 !!$     neededTabDerivs(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_EN) = 1
-     wantedEntrTabDeriv(EOS_GPHDERIV_E2  ,EOS_TAB_FOR_MAT) = .TRUE.
+!!!!!     wantedEntrTabDeriv(EOS_GPHDERIV_E2  ,EOS_TAB_FOR_MAT) = .TRUE.
   end if
   if(maskPtr(EOS_DED)) then
      maxDerivsE = 2

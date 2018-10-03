@@ -112,6 +112,7 @@ subroutine eos_gphReadGpNTables (tableName,   &
   integer :: notneededData
   integer :: step
   integer :: i,n,t,d,g
+  integer :: iw,ix,iy,iz
   integer :: ngroupsEnergy
   integer :: nstepsDensity
   integer :: nstepsTemperature
@@ -497,13 +498,24 @@ subroutine eos_gphReadGpNTables (tableName,   &
                            tdS % c(i) % val 
       end do
 
-      allocate(tbS % derDefs(tableDim,nderivs))
+      allocate(tbS % derDefs(tableDim,0:nderivs))
+      tbS % derDefs(:,0) = 0    ! for the 'zeroth' derivative
       do i=1,nderivs
          read(fileUnit,*)  tbS % derDefs(:,i)
       end do
 
-      allocate(tbS % table(0:ncorners-1, 0:nderivs, tdims(1), tdims(2), tdims(2), tdims(4)))
-      allocate(tbS % ells (tableDim,                tdims(1), tdims(2), tdims(2), tdims(4)))
+      allocate(tbS % table(0:ncorners-1, 0:nderivs, tdims(1), tdims(2), tdims(3), tdims(4)))
+      allocate(tbS % ells (tableDim,                tdims(1), tdims(2), tdims(3), tdims(4)))
+      do iz=1,tdims(4)
+         do iy=1,tdims(3)
+            do ix=1,tdims(2)
+               do iw=1,tdims(1)
+                  read(fileUnit,*)  tbS % table(0:,0:,iw,ix,iy,iz), tbS % ells(:,iw,ix,iy,iz)
+               end do
+            end do
+         end do
+      end do
+      print*,'ells:',tbS % ells
          
 
 !!$      if (tdS % isLog) then
