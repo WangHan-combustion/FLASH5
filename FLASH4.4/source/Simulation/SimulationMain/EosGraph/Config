@@ -25,3 +25,9 @@ VARIABLE eint TYPE: PER_MASS   	EOSMAP:  EINT # specific internal energy (U)
 # Needed for Helmholtz Ye:
 MASS_SCALAR YE    EOSMAPIN: YE
 MASS_SCALAR SUMY  EOSMAPIN: SUMY
+
+USESETUPVARS Var1
+
+IF Var1 == "eint"
+ LINKIF	    Driver_evolveFlash.F90.eint	physics/Eos/EosMain
+ENDIF
