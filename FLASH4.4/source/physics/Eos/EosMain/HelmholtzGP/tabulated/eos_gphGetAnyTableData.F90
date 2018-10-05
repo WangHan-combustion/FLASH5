@@ -404,7 +404,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
       do der=0,nderivs
          do ic=0,ncorners-1
             r = r + o(ic,der) * f(ic,der,derW) 
-            print*,'...just added o*f; ic,der,derW,g=',ic,der,derW,g,', o,f=', o(ic,der),f(ic,der,derW)
+!!$$!!            print*,'...just added o*f; ic,der,derW,g=',ic,der,derW,g,', o,f=', o(ic,der),f(ic,der,derW)
          end do
       end do
       resultTT(derW, g) = r !DOT_PRODUCT(o,f)

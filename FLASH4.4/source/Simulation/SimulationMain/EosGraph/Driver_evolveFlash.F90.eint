@@ -29,9 +29,9 @@ subroutine Driver_evolveFlash()
 #include "constants.h"
 #include "Flash.h"
   implicit none
-  integer :: i,j,k, outLUnitE, outLUnitP
-  real,parameter :: xOgMin =  7.904
-  real,parameter :: xOgMax = 14.0
+  integer :: i,j,k, outLUnitE, outLUnitP, outLUnitS
+  real,parameter :: xOgMin =  1.537E+16   !2.05944809e+16
+  real,parameter :: xOgMax = 2.759E+16    ! 2.760E+16
   integer,parameter :: nIOg = 70
 #ifdef FLASH_3T
   integer,parameter :: eosMode = MODE_DENS_EI_SCATTER
@@ -44,7 +44,9 @@ subroutine Driver_evolveFlash()
   real :: xOgStep, xOgFact
   real :: density,temp,x,y,y1,y2,y3
 
-  eosMask(:) = .FALSE.
+  eosMask(:) = .TRUE.
+  eosMask(EOS_ETA) = .FALSE.
+
   eosMask(EOS_DET) = .TRUE.
   eosMask(EOS_DPT) = .TRUE.
 #ifdef FLASH_3T
@@ -79,6 +81,8 @@ subroutine Driver_evolveFlash()
   open(outLUnitE,file='EOSdumpE.dat',status='UNKNOWN')
   outLUnitP = 31
   open(outLUnitP,file='EOSdumpP.dat',status='UNKNOWN')
+  outLUnitS = 32
+  open(outLUnitS,file='EOSdumpS.dat',status='UNKNOWN')
 
   density = 1.0e2
 
@@ -87,8 +91,8 @@ subroutine Driver_evolveFlash()
      x = xOgFaces(i)
      eosData(EOS_DENS) = density
      eosData(EOS_EINT) = x
-     eosData(EOS_ABAR) = 6.02
-     eosData(EOS_ZBAR) = 3.01
+     eosData(EOS_ABAR) = 7.2000001
+     eosData(EOS_ZBAR) = 3.6800001
      call Eos(eosMode,1,eosData,mask=eosMask)
 
      y = eosData(EOS_TEMP)
@@ -114,6 +118,18 @@ subroutine Driver_evolveFlash()
      y3 = eosData(EOS_ZBAR)
 #endif
      write(outLUnitP,1) x,y,y1,y2,y3,eosData(EOS_DPT)
+
+     y = eosData(EOS_ENTR)
+#ifdef FLASH_3T
+     y1 = eosData(EOS_PRESION)
+     y2 = eosData(EOS_ENTRELE)
+     y3 = eosData(EOS_ENTRRAD)
+#else
+     y1 = eosData(EOS_DSD)
+     y2 = eosData(EOS_GAMC)!
+     y3 = eosData(EOS_TEMP)!
+#endif
+     write(outLUnitS,1) x,y,y1,y2,y3,eosData(EOS_DST)!
 1    format(6(1x,1PG12.3))
 
   end do

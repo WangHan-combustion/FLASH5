@@ -133,6 +133,7 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
 
   real,dimension(vecLen) :: gamIon, gamM1Ion, ggprodIon
   real    :: Ye
+  real    :: dSdE, dSdrho, d2SdE2
   integer :: dens, temp, pres, eint, abar, zbar
   integer :: entr, dst, dsd
   integer :: dpt, dpd, det, ded, c_v, c_p, gamc, game, pel, ne, eta
@@ -427,15 +428,27 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
 !!$!!          needENDerivs=maxDerivsE,&
 !!$!!          needHCDerivs=-1,&
           outData=tabData)
-     where (transpose(neededTabDerivs(:,1:EOS_TABVT_ENTR)).GE.2)
-        tabData(2,:,:) = tabData(2,:,:)/eosData(abar+i)*eos_avo
-     end where
+!!$     where (transpose(neededTabDerivs(:,1:EOS_TABVT_ENTR)).GE.2)
+!!$        tabData(2,:,:) = tabData(2,:,:)/eosData(abar+i)*eos_avo
+!!$     end where
 
 #ifdef SUPPRESS_OLD4
      eosData(zbar+i) = max(eosData(zbar+i), &
                            tabData(EOS_TABINT_DERIV_0,EOS_TABVT_ZF,EOS_TAB_FOR_ELE))
 #endif
      if (eosData(zbar+i) == 0.0) print*,'zbar is 0.',EOS_TAB_FOR_ION,EOS_TAB_FOR_ELE,EOS_TAB_FOR_MAT
+
+     eosData(entr+i) = tabData(0  ,EOS_TABVT_ENTR,EOS_TAB_FOR_MAT)
+     dSdE   = tabData(EOS_GPHDERIV_E,EOS_TABVT_ENTR,combTable)
+     eosData(tempToUse+i) = 1.0 / dSdE
+     dSdrho = tabData(EOS_GPHDERIV_D,EOS_TABVT_ENTR,combTable)
+     dsd = (EOS_DSD-1)*vecLen
+     eosData(dsd+i)  = dSdrho
+     eosData(pres+1) = - eosData(dens+i)**2 * eosData(tempToUse+i) * dSdrho 
+!!$     if(maskPtr(EOS_DET).OR. .TRUE.) then
+!!$        d2SdE2 = tabData(EOS_GPHDERIV_E2,EOS_TABVT_ENTR,combTable)
+!!$        eosData(det+1) = - 1.0 / (eosData(tempToUse+i)**2 * d2SdE2)
+!!$     end if
 #ifdef SUPPRESS_OLD4
      if (wantComb) then
         eosData(eint+i) = tabData(EOS_TABINT_DERIV_0,EOS_TABVT_EN,EOS_TAB_FOR_ION) + &
@@ -597,6 +610,7 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
      end if
      if(maskPtr(EOS_DST)) then
         if (wantEle .AND. mySubtype==6) then
+           print*,'***YES***  (wantEle .AND. mySubtype==6)'
            dst = (EOS_DST-1)*vecLen
            eosData(dst+i) = tabData(EOS_TABINT_DERIV_DT,EOS_TABVT_ENTR,EOS_TAB_FOR_ELE)
         end if
@@ -945,6 +959,7 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
            det = (EOS_DET-1)*vecLen
            dpt = (EOS_DPT-1)*vecLen
            dst = (EOS_DST-1)*vecLen
+           print*,'eosData(temp+ilo:temp+ihi) is',eosData(temp+ilo:temp+ihi)
            eosData(dst+ilo:dst+ihi) = ( (eosData(dpt+ilo:dpt+ihi)  / eosData(dens+ilo:dens+ihi) + eosData(det+ilo:det+ihi)) -&
                 &                      (eosData(pres+ilo:pres+ihi)/ eosData(dens+ilo:dens+ihi) + eosData(eint+ilo:eint+ihi))/ &
                 &                      eosData(temp+ilo:temp+ihi) ) / eosData(temp+ilo:temp+ihi)
@@ -953,7 +968,9 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
         end if
      end if
      if (mask(EOS_DSD)) then
-        if (mask(EOS_DED) .AND. mask(EOS_DPD)) then
+        if (.TRUE.) then
+           ! Already done above from table
+        else if (mask(EOS_DED) .AND. mask(EOS_DPD)) then
            dsd = (EOS_DSD-1)*vecLen
            ded = (EOS_DED-1)*vecLen
            dpd = (EOS_DPD-1)*vecLen
