@@ -361,18 +361,27 @@ subroutine eos_gphGetAnyTableData (xpos,            &
                             if (degW+degree > 0) then
                                ib = ibits(ic, wrtVar-1, 1)
                                select case (degW+degree)
-                               case(1)
-!!$                               fact = (chi(wrtVar) - clo(wrtVar)) / ell(wrtVar)**2
-!!$                               fact = fact * (-1)**ib
+                               case(1) ! Cf. "probsbilists'" Hermite polynomials...
                                   fact = (xpos(wrtVar) - clohi(wrtVar,ib)) / ell(wrtVar)**2
+                                  fact = fact * (-1)**degW
 !!$                                  print*,'...derW,der,wrtVar,xpos(wrtVar),ib,clohi(wrtVar,ib):', &
 !!$                                       derW,der,wrtVar,xpos(wrtVar),ib,clohi(wrtVar,ib),'->',fact
-                                  fact = fact * (-1)**degW
                                case(2)
 !!$                               fact = (chi(wrtVar) - clo(wrtVar)) / ell(wrtVar)**2
 !!$                               fact = fact**2 - 1. / ell(wrtVar)**2
                                   fact = ((xpos(wrtVar) - clohi(wrtVar,ib))**2 - ell(wrtVar)**2) / &
                                                                                  ell(wrtVar)**4
+                                  fact = fact * (-1)**degW
+                               case(3)
+                                  fact = ((xpos(wrtVar) - clohi(wrtVar,ib))**3                     &
+                                           - 3*(xpos(wrtVar) - clohi(wrtVar,ib))*ell(wrtVar)**2) / &
+                                                                                 ell(wrtVar)**6
+                                  fact = -fact * (-1)**degW
+                               case(4)
+                                  fact = ((xpos(wrtVar) - clohi(wrtVar,ib))**4                     &
+                                           - 6*(xpos(wrtVar) - clohi(wrtVar,ib))**2*ell(wrtVar)**2 &
+                                           + 3                                     *ell(wrtVar)**4) / &
+                                                                                 ell(wrtVar)**8
                                   fact = fact * (-1)**degW
                                case default
                                   print*,'derW,der,wrtVar,degW,degree,fact,derDefs:',needDerivs(:,derW),derDefs(:,der)
@@ -404,7 +413,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
       do der=0,nderivs
          do ic=0,ncorners-1
             r = r + o(ic,der) * f(ic,der,derW) 
-!!$$!!            print*,'...just added o*f; ic,der,derW,g=',ic,der,derW,g,', o,f=', o(ic,der),f(ic,der,derW)
+!!$            print*,'...just added o*f; ic,der,derW,g=',ic,der,derW,g,', o,f,r', o(ic,der),f(ic,der,derW),r
          end do
       end do
       resultTT(derW, g) = r !DOT_PRODUCT(o,f)

@@ -56,7 +56,8 @@ subroutine eos_gphGetTabulatedData (xpos,   &
                           eos_gphTheTable
   use eos_gphData, ONLY: EOS_GPHDERIV_D , &
                          EOS_GPHDERIV_E , &
-                         EOS_GPHDERIV_E2
+                         EOS_GPHDERIV_E2, &
+                         EOS_GPHDERIV_ED
   implicit none
   
 #include "Eos.h"
@@ -117,6 +118,7 @@ subroutine eos_gphGetTabulatedData (xpos,   &
   if (wantedTabDeriv(EOS_GPHDERIV_E  ,EOS_TAB_FOR_MAT)) numDerivs = 1
   if (wantedTabDeriv(EOS_GPHDERIV_D  ,EOS_TAB_FOR_MAT)) numDerivs = numDerivs + 1
   if (wantedTabDeriv(EOS_GPHDERIV_E2 ,EOS_TAB_FOR_MAT)) numDerivs = numDerivs + 1
+  if (wantedTabDeriv(EOS_GPHDERIV_ED ,EOS_TAB_FOR_MAT)) numDerivs = numDerivs + 1
 
   allocate(wantedDerivs(EOST_MAX_IVARS,numDerivs))
   wantedDerivs(:,:) = 0
@@ -133,6 +135,10 @@ subroutine eos_gphGetTabulatedData (xpos,   &
   if (wantedTabDeriv(EOS_GPHDERIV_E2 ,EOS_TAB_FOR_MAT)) then
      i = i + 1
      wantedDerivs(:,i) = derDefs(:,EOS_GPHDERIV_E2)
+  end if
+  if (wantedTabDeriv(EOS_GPHDERIV_ED ,EOS_TAB_FOR_MAT)) then
+     i = i + 1
+     wantedDerivs(:,i) = derDefs(:,EOS_GPHDERIV_ED)
   end if
 
 !

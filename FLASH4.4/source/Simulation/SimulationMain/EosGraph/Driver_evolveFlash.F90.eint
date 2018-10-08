@@ -32,7 +32,7 @@ subroutine Driver_evolveFlash()
   integer :: i,j,k, outLUnitE, outLUnitP, outLUnitS
   real,parameter :: xOgMin =  1.537E+16   !2.05944809e+16
   real,parameter :: xOgMax = 2.759E+16    ! 2.760E+16
-  integer,parameter :: nIOg = 70
+  integer,parameter :: nIOg = 200 ! 70
 #ifdef FLASH_3T
   integer,parameter :: eosMode = MODE_DENS_EI_SCATTER
 #else
@@ -83,6 +83,11 @@ subroutine Driver_evolveFlash()
   open(outLUnitP,file='EOSdumpP.dat',status='UNKNOWN')
   outLUnitS = 32
   open(outLUnitS,file='EOSdumpS.dat',status='UNKNOWN')
+#ifndef FLASH_3T
+  write(outLUnitE,2)  "eint  ", "Temperature", " d e / d rho", "Entropy S", " Abar"      , " d e / d T"
+  write(outLUnitP,2)  "eint  ", "Pressure P" , " d P / d rho", "gamma c"  , " Zbar"      , " d P / d T" 
+  write(outLUnitS,2)  "eint  ", "Entropy s"  , " d s / d rho", "c_v "     , "Temperature", " d s / d T" 
+#endif
 
   density = 1.0e2
 
@@ -126,11 +131,12 @@ subroutine Driver_evolveFlash()
      y3 = eosData(EOS_ENTRRAD)
 #else
      y1 = eosData(EOS_DSD)
-     y2 = eosData(EOS_GAMC)!
+     y2 = eosData(EOS_DET)
      y3 = eosData(EOS_TEMP)!
 #endif
      write(outLUnitS,1) x,y,y1,y2,y3,eosData(EOS_DST)!
 1    format(6(1x,1PG12.3))
+2    format('#',6(1x,A12))
 
   end do
 

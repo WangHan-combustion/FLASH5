@@ -92,7 +92,8 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
   use eos_gphData, ONLY: eos_gphDerDefs
   use eos_gphData, ONLY: EOS_GPHDERIV_D , &
                          EOS_GPHDERIV_E , &
-                         EOS_GPHDERIV_E2
+                         EOS_GPHDERIV_E2, &
+                         EOS_GPHDERIV_ED
 
   implicit none
 #include "constants.h"
@@ -129,11 +130,13 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
   ! This is the variable that is used internally -- set to false unless mask comes in
   logical,save,target, dimension(EOS_VARS+1:EOS_NUM) :: maskInternal
   data maskInternal / EOS_DERIVS * .FALSE. /
-  logical,pointer, dimension(:) :: maskPtr
+ logical,pointer, dimension(:) :: maskPtr
 
   real,dimension(vecLen) :: gamIon, gamM1Ion, ggprodIon
   real    :: Ye
+  real    :: dSTabdE, dSTabdrho, d2STabdE2, d2STabdEdrho
   real    :: dSdE, dSdrho, d2SdE2
+  real    :: dSdT
   integer :: dens, temp, pres, eint, abar, zbar
   integer :: entr, dst, dsd
   integer :: dpt, dpd, det, ded, c_v, c_p, gamc, game, pel, ne, eta
@@ -391,11 +394,12 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
   if(maskPtr(EOS_DET).OR. .TRUE.) then
      maxDerivsE = 1
 !!$     neededTabDerivs(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_EN) = 1
-!!!!!     wantedEntrTabDeriv(EOS_GPHDERIV_E2  ,EOS_TAB_FOR_MAT) = .TRUE.
+     wantedEntrTabDeriv(EOS_GPHDERIV_E2  ,EOS_TAB_FOR_MAT) = .TRUE.
   end if
   if(maskPtr(EOS_DED)) then
      maxDerivsE = 2
 !!$     neededTabDerivs(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_EN) = 2
+     wantedEntrTabDeriv(EOS_GPHDERIV_ED  ,EOS_TAB_FOR_MAT) = .TRUE.
   end if
   if(maskPtr(EOS_DPT).OR. .TRUE.) then
 !!$     neededTabDerivs(EOS_TAB_FOR_ION:EOS_TAB_FOR_ELE,EOS_TABVT_PR) = 1
@@ -439,16 +443,21 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
      if (eosData(zbar+i) == 0.0) print*,'zbar is 0.',EOS_TAB_FOR_ION,EOS_TAB_FOR_ELE,EOS_TAB_FOR_MAT
 
      eosData(entr+i) = tabData(0  ,EOS_TABVT_ENTR,EOS_TAB_FOR_MAT)
-     dSdE   = tabData(EOS_GPHDERIV_E,EOS_TABVT_ENTR,combTable)
-     eosData(tempToUse+i) = 1.0 / dSdE
-     dSdrho = tabData(EOS_GPHDERIV_D,EOS_TABVT_ENTR,combTable)
+     dSTabdE   = tabData(EOS_GPHDERIV_E,EOS_TABVT_ENTR,combTable)
+     eosData(tempToUse+i) = 1.0 / dSTabdE
+     if(maskPtr(EOS_DET).OR. .TRUE.) then
+        d2STabdE2 = tabData(EOS_GPHDERIV_E2,EOS_TABVT_ENTR,combTable)
+        eosData(det+1) = - 1.0 / (eosData(tempToUse+i)**2 * d2STabdE2)
+     end if
+     dSTabdrho    = tabData(EOS_GPHDERIV_D, EOS_TABVT_ENTR,combTable)
+     d2STabdEdrho = tabData(EOS_GPHDERIV_ED,EOS_TABVT_ENTR,combTable)
+     dSdrho    = dSTabdrho - dSTabdE * d2STabdEdrho / d2STabdE2
      dsd = (EOS_DSD-1)*vecLen
      eosData(dsd+i)  = dSdrho
      eosData(pres+1) = - eosData(dens+i)**2 * eosData(tempToUse+i) * dSdrho 
-!!$     if(maskPtr(EOS_DET).OR. .TRUE.) then
-!!$        d2SdE2 = tabData(EOS_GPHDERIV_E2,EOS_TABVT_ENTR,combTable)
-!!$        eosData(det+1) = - 1.0 / (eosData(tempToUse+i)**2 * d2SdE2)
-!!$     end if
+     dSdT           = - dSTabdE**3 / d2STabdE2
+     dst = (EOS_DST-1)*vecLen
+     eosData(dst+i) = dSTabdE ! dSdT
 #ifdef SUPPRESS_OLD4
      if (wantComb) then
         eosData(eint+i) = tabData(EOS_TABINT_DERIV_0,EOS_TABVT_EN,EOS_TAB_FOR_ION) + &
@@ -954,6 +963,8 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
     ! Entropy derivatives   
      if (mask(EOS_DST)) then
         if (wantEle .AND. mySubtype==6) then
+           ! Already done above from table
+        else if (.TRUE.) then
            ! Already done above from table
         else if (mask(EOS_DET) .AND. mask(EOS_DPT)) then
            det = (EOS_DET-1)*vecLen
