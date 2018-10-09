@@ -56,6 +56,8 @@ subroutine eos_initTabulated()
                                           eos_gphHeatCpKind,          &
                                           TheGphTable => eos_gphTheTable, &
                                           eos_gphAllDiag
+  use eos_gphData,                 ONLY : eos_maxFactorUp, eos_maxFactorDown
+
 
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use PhysicalConstants_interface, ONLY : PhysicalConstants_get
@@ -138,6 +140,10 @@ subroutine eos_initTabulated()
 !
 !
 !!$  call RuntimeParameters_get ("eos_useLogTables",   eos_useLogTables )
+
+  call RuntimeParameters_get('eos_maxFactorUp', eos_maxFactorUp)
+  call RuntimeParameters_get('eos_maxFactorDown', eos_maxFactorDown)
+
   call RuntimeParameters_get("eos_entrEleScaleChoice", eos_entrEleScaleChoice)
   call RuntimeParameters_get("eos_gphFileName", eos_gphFileName)
 

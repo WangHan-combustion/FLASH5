@@ -8,6 +8,9 @@ D &           temperature if it tries to go too high.
 D & Currently, only used in the Helmholtz/ExternalAbarZbar implementation of Eos.
 PARAMETER larget REAL 1.e20
 
+PARAMETER eos_maxFactorUp   REAL 10.0	[1.000001 ...         ]
+PARAMETER eos_maxFactorDown REAL 0.1	[0.0+     ... 0.999999]
+
 D eos_fluffDens material below this density has its energy replaced
 D &              if its temperature falls below smallt.
 D &              This should be a small density for enery conservation reasons.

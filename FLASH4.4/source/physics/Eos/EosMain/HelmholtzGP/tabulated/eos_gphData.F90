@@ -195,6 +195,8 @@ module eos_gphData
   type(eosT_diagPT), allocatable,target,save :: eos_gphAllDiag(:)
 
 
+  real, save :: eos_maxFactorUp
+  real, save :: eos_maxFactorDown
 
 end module eos_gphData
 
