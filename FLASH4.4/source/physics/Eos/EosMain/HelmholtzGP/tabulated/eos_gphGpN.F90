@@ -457,7 +457,7 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
      eosData(pres+1) = - eosData(dens+i)**2 * eosData(tempToUse+i) * dSdrho 
      dSdT           = - dSTabdE**3 / d2STabdE2
      dst = (EOS_DST-1)*vecLen
-     eosData(dst+i) = dSTabdE ! dSdT
+     eosData(dst+i) = dSdT ! was dSTabdE for debugging the table
 #ifdef SUPPRESS_OLD4
      if (wantComb) then
         eosData(eint+i) = tabData(EOS_TABINT_DERIV_0,EOS_TABVT_EN,EOS_TAB_FOR_ION) + &
