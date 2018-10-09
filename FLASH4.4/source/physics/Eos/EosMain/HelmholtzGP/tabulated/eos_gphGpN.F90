@@ -752,7 +752,6 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
 #ifdef EOS_FORCE_2T
         eosData(gamc+ilo:gamc+ihi)=eos_gammaEle
 #else
-        call setCombinedGamc(gamc,coupled=.FALSE.)
 !        eosData(gamc+ilo:gamc+ihi)=gamcRow(1:rowLen) !replace with expression based on component states!
 #endif
         eosData(entr+ilo:entr+ihi)=stotRow(1:rowLen) !(replace with expression based on component states)
@@ -876,15 +875,6 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
   end select
 
 
-  if(useNRForGamcCombined) then
-     call Driver_abortFlash('Cannot set eosData(gamc+1...) from gamcRow w.d.n.e.!')
-  else if (doCoupledForGamc .AND. (mode.NE.MODE_DENS_TEMP)) then
-     call setCombinedGamc(gamc,coupled=.TRUE.)
-  else if (doUncoupledForGamc) then
-     call setCombinedGamc(gamc,coupled=.FALSE.)
-  else
-     ! leave as set above - KW
-  end if
 
 
   if(present(mask)) then
@@ -1065,29 +1055,4 @@ subroutine eos_gphGpN(mode, vecLen, eosData, vecBegin, vecEnd, eosType, subtype,
 
   return
 
-contains
-  subroutine setCombinedGamc(gamcCombined,coupled)
-    integer, intent(in) :: gamcCombined
-    logical, intent(in) :: coupled
-
-!!$#if 0
-    if (coupled) then
-!!$       eosData(gamcCombined+ilo:gamcCombined+ihi) = &
-!!$         ( gamM1Ion(ilo:ihi)*eosData(presIon+ilo:presIon+ihi)+ &
-!!$           eos_gammam1Ele*eosData(presEle+ilo:presEle+ihi)+ &
-!!$           eos_gammam1Rad*eosData(presRad+ilo:presRad+ihi) ) / eosData(pres+ilo:pres+ihi)
-!!$       eosData(gamcCombined+ilo:gamcCombined+ihi) = &
-!!$            1.0 + 1.0/eosData(gamcCombined+ilo:gamcCombined+ihi) 
-    else
-!!$       eosData(gamcCombined+ilo:gamcCombined+ihi) = &
-!!$         ( gamIon(ilo:ihi)*eosData(presIon+ilo:presIon+ihi)+ &
-!!$           eos_gammaEle*eosData(presEle+ilo:presEle+ihi)+ &
-!!$           eos_gammaRad*eosData(presRad+ilo:presRad+ihi) ) / eosData(pres+ilo:pres+ihi)
-    end if
-    stop 'called setCombinedGamc in eos_gphGpN'
-!!$#else
-!!$    eosData(gamcCombined+ilo:gamcCombined+ihi) = 5./3.
-!!$#endif
-
-  end subroutine setCombinedGamc
 end subroutine eos_gphGpN
