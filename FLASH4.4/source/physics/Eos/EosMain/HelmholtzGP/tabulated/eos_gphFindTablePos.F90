@@ -106,6 +106,7 @@ subroutine eos_gphFindTablePos (        xpos, &
   thisTypeTable => eos_gphTheTable%tg(varType)
   tableDim = thisTypeTable%td % N 
 
+  ipos(:) = 1
  Do ivi = 1,tableDim
   thisTypeIvar => thisTypeTable%td % c(ivi) % val
 !

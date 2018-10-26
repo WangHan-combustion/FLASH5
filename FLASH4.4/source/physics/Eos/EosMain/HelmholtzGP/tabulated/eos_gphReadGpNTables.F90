@@ -486,6 +486,7 @@ subroutine eos_gphReadGpNTables (tableName,   &
       tdS % nderivs = nderivs
       tdS % ncorners = ncorners
 
+      tdims(:) = 1
       read(fileUnit,*) (tdS % c(i) % nIval, i=1,tableDim)
       do i=1,tableDim
          tdims(i) = tdS % c(i) % nIval
