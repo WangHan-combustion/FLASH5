@@ -107,7 +107,15 @@ derived EOS_DETAT Derivative of electron dgeneracy parameter wrt temperature
 #define EOS_TABULAR_E 2
 #define EOS_TABULAR_C 3
 #define EOS_TABULAR_P 4
+#define EOS_TABULAR_S 5
 #define EOS_APPROX_KIN 40
+
+#if 0
+EOST_MAX_IVARS is the  maximum table dimension for the HelmholtzGP implementation
+in this code version.  Standard is 4 input variables. (canonical: specific energy, 
+density, Ye, A or similar)
+#endif
+#define EOST_MAX_IVARS 4
 
 
 #define EOS_LOGLEVEL_WARN_ANY      100
