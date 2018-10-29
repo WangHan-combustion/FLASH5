@@ -31,8 +31,8 @@ subroutine Driver_evolveFlash()
   implicit none
   integer :: i,j,k, outLUnitE, outLUnitP, outLUnitS
   real,parameter :: xOgMin =  1.537E+16   !2.05944809e+16
-  real,parameter :: xOgMax = 2.759E+16    ! 2.760E+16
-  integer,parameter :: nIOg = 200 ! 70
+  real,parameter :: xOgMax = 2.059448e+16 ! 2.759E+16    ! 2.760E+16
+  integer,parameter :: nIOg = 100 ! 200 ! 70
 #ifdef FLASH_3T
   integer,parameter :: eosMode = MODE_DENS_EI_SCATTER
 #else
@@ -90,14 +90,15 @@ subroutine Driver_evolveFlash()
 #endif
 
   density = 1.0e2
+!!$  density = 1.359356e2
 
   do i = 1,nIOg+1
 
      x = xOgFaces(i)
      eosData(EOS_DENS) = density
      eosData(EOS_EINT) = x
-     eosData(EOS_ABAR) = 7.2000001
-     eosData(EOS_ZBAR) = 3.6800001
+     eosData(EOS_ABAR) = 6.0000001
+     eosData(EOS_ZBAR) = 2.7000001
      call Eos(eosMode,1,eosData,mask=eosMask)
 
      y = eosData(EOS_TEMP)
