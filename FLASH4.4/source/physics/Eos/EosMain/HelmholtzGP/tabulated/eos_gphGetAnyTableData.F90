@@ -376,7 +376,7 @@ subroutine eos_gphGetAnyTableData (xpos,            &
                                   fact = ((xpos(wrtVar) - clohi(wrtVar,ib))**3                     &
                                            - 3*(xpos(wrtVar) - clohi(wrtVar,ib))*ell(wrtVar)**2) / &
                                                                                  ell(wrtVar)**6
-                                  fact = -fact * (-1)**degW
+                                  fact = fact * (-1)**degW
                                case(4)
                                   fact = ((xpos(wrtVar) - clohi(wrtVar,ib))**4                     &
                                            - 6*(xpos(wrtVar) - clohi(wrtVar,ib))**2*ell(wrtVar)**2 &
