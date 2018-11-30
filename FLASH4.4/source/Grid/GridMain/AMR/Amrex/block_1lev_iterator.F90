@@ -60,6 +60,7 @@ module block_1lev_iterator
         procedure, public :: next
         procedure, public :: grid_index
         procedure, public :: tilebox
+        procedure, public :: growntilebox
         procedure, public :: fabbox
         procedure, public :: destroy_iterator
     end type block_1lev_iterator_t
@@ -349,6 +350,36 @@ contains
 
       bx = this%mfi%tilebox()
     end function tilebox
+
+    !!****m* block_1lev_iterator_t/growntilebox
+    !!
+    !! NAME
+    !!  growntilebox
+    !!
+    !! SYNPOSIS
+    !!  box = itor%growntilebox()
+    !!
+    !! DESCRIPTION
+    !!  Obtain the box with guardcells of the block/tile currently
+    !!  "loaded" into the iterator.  For tiles, the guardcells are those
+    !!  guardcells of the tile's parent block that are adjacent to the
+    !!  tile.  In this sense, each guardcell of the parent block is associated
+    !!  with only one tile.
+    !!
+    !! RETURN VALUE
+    !!  An AMReX box object.  The index space of the box is the index
+    !!  space of the multifab used to construct the underlying MFIter.
+    !!  The spatial indices of the box use AMReX's 0-based scheme.
+    !!
+    !!****
+    function growntilebox(this) result(bx)
+      use amrex_box_module, ONLY : amrex_box
+
+      class(block_1lev_iterator_t), intent(in) :: this
+      type(amrex_box)                          :: bx
+
+      bx = this%mfi%growntilebox()
+    end function growntilebox
 
     !!****m* block_1lev_iterator_t/fabbox
     !!
