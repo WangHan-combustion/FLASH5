@@ -42,7 +42,6 @@ subroutine gr_markRefineDerefineCallback(lev, tags, time, tagval, clearval) bind
                                       amrex_mfiter_build, &
                                       amrex_mfiter_destroy
  
-   use block_metadata,         ONLY : block_metadata_t
    use gr_physicalMultifabs,   ONLY : unk
 
    implicit none
@@ -56,25 +55,22 @@ subroutine gr_markRefineDerefineCallback(lev, tags, time, tagval, clearval) bind
    type(amrex_tagboxarray) :: tag
    type(amrex_mfiter)      :: mfi                                                             
    type(amrex_box)         :: bx
-   type(block_metadata_t)  :: blockDesc
 
-   real(wp),               contiguous, pointer :: solnData(:,:,:,:)
    character(kind=c_char), contiguous, pointer :: tagData(:,:,:,:)
 
-   integer :: off(1:MDIM)
-
-   integer :: refine_to
    integer :: i, j
+
+   nullify(tagData)
 
    write(*,'(A,A,I2)') "[gr_markRefineDerefineCallback]", &
                        "      Started on level ", lev + 1
-   
+
    tag = tags
 
    call amrex_mfiter_build(mfi, unk(lev), tiling=.FALSE.)                             
    do while(mfi%next())
       bx = mfi%tilebox()
-        
+
       tagData => tag%dataptr(mfi)
       tagData(:, :, :, :) = clearval
 

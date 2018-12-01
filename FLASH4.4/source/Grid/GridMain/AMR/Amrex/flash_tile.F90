@@ -232,6 +232,13 @@ contains
         block%blkLimitsGC(HIGH, 1:NDIM) = idx(1:NDIM) + 1
     end subroutine parentBlock
 
+    ! DEV: If the client code requests a pointer to data that is not 
+    ! included in the problem, this routine will return a null pointer
+    ! without indicating an error.
+    !
+    ! This gives the client code the possibility to use either preprocessor
+    ! checks to avoid calling this routine needlessly or to do runtime checks
+    ! of pointers.
     subroutine getDataPtr(this, dataPtr, gridDataStruct)
         use amrex_fort_module,      ONLY : wp => amrex_real
 
@@ -241,7 +248,7 @@ contains
                                            fluxes
 
         class(flash_tile_t), intent(IN),  target   :: this
-        real(wp),            intent(OUT), pointer  :: dataPtr(:, :, :, :)
+        real(wp),                         pointer  :: dataPtr(:, :, :, :)
         integer,             intent(IN),  optional :: gridDataStruct
 
         integer :: gds
@@ -252,21 +259,9 @@ contains
             call Driver_abortFlash("[getDataPtr] Given data pointer must be NULL")
         end if
 
-        ! Set default to null for those data structures that are not defined for
-        ! the dimensionality of the problem's domain
+        nullify(lo)
         nullify(dataPtr)
 
-#ifdef DEBUG_GRID
-        if(present(gridDataStruct)) then
-           if (      (gridDataStruct /= CENTER) .AND. (gridDataStruct /= SCRATCH_CTR) &
-               .AND. (gridDataStruct /= FACEX)  .AND. (gridDataStruct /= FACEY) &
-               .AND. (gridDataStruct /= FACEZ)) then
-              print *, "Grid_getBlkPtr: gridDataStruct set to improper value"
-              print *, "gridDataStruct must = CENTER,FACEX,FACEY,FACEZ," // &
-                   "WORK or SCRATCH (defined in constants.h)"
-              call Driver_abortFlash("gridDataStruct must be one of CENTER,FACEX,FACEY,FACEZ,SCRATCH (see constants.h)")
-        end if
-#endif
         if(present(gridDataStruct)) then
            gds = gridDataStruct
         else
@@ -274,9 +269,9 @@ contains
         end if
 
         lo => this%blkLimitsGC(LOW, :)
-        if (gds == SCRATCH_CTR) then
-           ! DEV: Hardware the assumption that SCRATCH_CTR is stored without
-           ! guard cells is hardwired here.
+        ! These multifabs are hardwired at creation to not have guardcells
+        if (     (gds == SCRATCH_CTR) .OR. (gds == FLUXX) & 
+            .OR. (gds == FLUXY)       .OR. (gds == FLUXZ)) then
            lo => this%limits(LOW, :)
         end if
   
@@ -287,28 +282,42 @@ contains
           select case (gds)
           case(CENTER)
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => unk     (ilev)%dataptr(igrd)
-#if NFACE_VARS > 0
           case(FACEX)
+#if NFACE_VARS > 0
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => facevarx(ilev)%dataptr(igrd)
+#else
+             nullify(dataPtr)
+#endif
+          case(FACEY)
+#if NFACE_VARS > 0 && NDIM >= 2
+             dataPtr(lo(1):, lo(2):, lo(3):, 1:) => facevary(ilev)%dataptr(igrd)
+#else
+             nullify(dataPtr)
+#endif
+          case(FACEZ)
+#if NFACE_VARS > 0 && NDIM == 3
+             dataPtr(lo(1):, lo(2):, lo(3):, 1:) => facevarz(ilev)%dataptr(igrd)
+#else
+             nullify(dataPtr)
+#endif
           case(FLUXX)
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => fluxes(ilev, IAXIS)%dataptr(igrd)
-#if NDIM >= 2
-          case(FACEY)
-             dataPtr(lo(1):, lo(2):, lo(3):, 1:) => facevary(ilev)%dataptr(igrd)
           case(FLUXY)
+#if NDIM >= 2
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => fluxes(ilev, JAXIS)%dataptr(igrd)
+#else
+             nullify(dataPtr)
 #endif
-#if NDIM == 3
-          case(FACEZ)
-             dataPtr(lo(1):, lo(2):, lo(3):, 1:) => facevarz(ilev)%dataptr(igrd)
           case(FLUXZ)
+#if NDIM == 3
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => fluxes(ilev, KAXIS)%dataptr(igrd)
-#endif
+#else
+             nullify(dataPtr)
 #endif
           case(SCRATCH_CTR)
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => gr_scratchCtr(ilev)%dataptr(igrd)
           case DEFAULT
-              call Driver_abortFlash("[Grid_getBlkPtr_desc] Unknown grid data structure")
+              call Driver_abortFlash("[getDataPtr] Unknown grid data structure")
           end select
         end associate
     end subroutine getDataPtr
