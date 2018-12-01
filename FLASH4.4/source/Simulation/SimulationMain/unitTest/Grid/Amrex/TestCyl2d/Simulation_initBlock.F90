@@ -25,29 +25,29 @@
 !!
 !!***
 
-subroutine Simulation_initBlock(initData, block)
-    use block_metadata, ONLY : block_metadata_t
-    
-    implicit none
-    
-    real,                   intent(IN), pointer :: initData(:, :, :, :)
-    type(block_metadata_t), intent(IN)          :: block
-
 #include "constants.h"
 #include "Flash.h"
-  
-    integer :: i = 1
-    integer :: j = 1
-    integer :: k = 1
-    integer :: var = 1
 
-    associate(lo => block%limitsGC(LOW,  :), &
-              hi => block%limitsGC(HIGH, :))
-        do         k = lo(KAXIS), hi(KAXIS)
-            do     j = lo(JAXIS), hi(JAXIS)
-                do i = lo(IAXIS), hi(IAXIS)
-                    do var=UNK_VARS_BEGIN, UNK_VARS_END
-                        initData(i, j, k, var) = 1.1d0 * var
+subroutine Simulation_initBlock(initData, tileDesc)
+    use flash_tile, ONLY : flash_tile_t
+
+    implicit none
+
+    real,                           pointer :: initData(:, :, :, :)
+    type(flash_tile_t), intent(IN)          :: tileDesc
+
+    integer :: i
+    integer :: j
+    integer :: k
+    integer :: var
+
+    associate(lo => tileDesc%limitsGC(LOW,  :), &
+              hi => tileDesc%limitsGC(HIGH, :))
+        do           var = UNK_VARS_BEGIN, UNK_VARS_END
+            do         k = lo(KAXIS), hi(KAXIS)
+                do     j = lo(JAXIS), hi(JAXIS)
+                    do i = lo(IAXIS), hi(IAXIS)
+                        initData(i, j, k, var) = 1.1 * var
                     end do
                 end do
             end do
