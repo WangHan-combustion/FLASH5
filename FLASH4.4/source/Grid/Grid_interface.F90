@@ -1379,6 +1379,25 @@ Module Grid_interface
   end interface
   
   interface
+     subroutine Grid_getTileIterator(itor, nodetype, level, tiling)
+       use flash_iterator, ONLY : flash_iterator_t
+       implicit none
+       type(flash_iterator_t), intent(OUT)          :: itor
+       integer,                intent(IN)           :: nodetype
+       integer,                intent(IN), optional :: level
+       logical,                intent(IN), optional :: tiling
+     end subroutine Grid_getTileIterator
+  end interface
+
+  interface
+     subroutine Grid_releaseTileIterator(itor)
+       use flash_iterator, ONLY : flash_iterator_t
+       implicit none
+       type(flash_iterator_t), intent(INOUT) :: itor
+     end subroutine Grid_releaseTileIterator
+  end interface
+
+  interface
      subroutine Grid_zeroFluxData
        implicit none
      end subroutine Grid_zeroFluxData

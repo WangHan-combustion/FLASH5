@@ -12,52 +12,49 @@
 !!***
 
 #include "Flash.h"
+#include "constants.h"
 
 subroutine Grid_zeroFluxData()
-  use amrex_amrcore_module, ONLY : amrex_get_finest_level
-
-  use Grid_interface,       ONLY : Grid_getFluxPtr, Grid_releaseFluxPtr
-  use gr_interface,         ONLY : gr_getBlkIterator, &
-                                   gr_releaseBlkIterator
-  use gr_iterator,          ONLY : gr_iterator_t
-  use block_metadata,       ONLY : block_metadata_t
+  use Grid_interface,       ONLY : Grid_getTileIterator, &
+                                   Grid_releaseTileIterator
+  use flash_iterator,       ONLY : flash_iterator_t
+  use flash_tile,           ONLY : flash_tile_t
 
   implicit none
 
-  type(gr_iterator_t)    :: itor
-  type(block_metadata_t) :: block
+  type(flash_iterator_t) :: itor
+  type(flash_tile_t)     :: tileDesc
 
-  real, pointer :: fluxDataX(:, :, : , :) => null()
-  real, pointer :: fluxDataY(:, :, : , :) => null()
-  real, pointer :: fluxDataZ(:, :, : , :) => null()
-
-  integer :: level
-  integer :: finest_level
+  real, pointer :: fluxData(:, :, :, :)
 
   if(NFLUXES < 1)   RETURN
- 
-  ! FLASH uses 1-based level index / AMReX uses 0-based
-  finest_level = amrex_get_finest_level() + 1
-  do level=1, finest_level
-    call gr_getBlkIterator(itor, level=level, tiling=.FALSE.)
-    do while (itor%is_valid())
-      call itor%blkMetaData(block)
-         
-      call Grid_getFluxPtr(block, fluxDataX, fluxDataY, fluxDataZ)
-      if (associated(fluxDataX)) then
-          fluxDataX(:,:,:,:) = 0.0
-      end if
-      if (associated(fluxDataY)) then
-          fluxDataY(:,:,:,:) = 0.0
-      end if
-      if (associated(fluxDataZ)) then
-          fluxDataZ(:,:,:,:) = 0.0
-      end if
-      call Grid_releaseFluxPtr(block, fluxDataX, fluxDataY, fluxDataZ)
 
-      call itor%next()
-    end do
-    call gr_releaseBlkIterator(itor)
+  nullify(fluxData)
+
+  call Grid_getTileIterator(itor, ALL_BLKS, tiling=.FALSE.)
+  do while (itor%isValid())
+    call itor%currentTile(tileDesc)
+
+    call tileDesc%getDataPtr(fluxData, FLUXX)
+    if (associated(fluxData)) then
+        fluxData(:,:,:,:) = 0.0
+    end if
+    call tileDesc%releaseDataPtr(fluxData, FLUXX)
+
+    call tileDesc%getDataPtr(fluxData, FLUXY)
+    if (associated(fluxData)) then
+        fluxData(:,:,:,:) = 0.0
+    end if
+    call tileDesc%releaseDataPtr(fluxData, FLUXY)
+
+    call tileDesc%getDataPtr(fluxData, FLUXZ)
+    if (associated(fluxData)) then
+        fluxData(:,:,:,:) = 0.0
+    end if
+    call tileDesc%releaseDataPtr(fluxData, FLUXZ)
+
+    call itor%next()
   end do
+  call Grid_releaseTileIterator(itor)
 end subroutine Grid_zeroFluxData
 

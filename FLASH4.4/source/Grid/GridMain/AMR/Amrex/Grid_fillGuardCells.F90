@@ -90,9 +90,8 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
                                         amrex_ref_ratio
   use amrex_fillpatch_module,    ONLY : amrex_fillpatch
   
-  use Grid_interface,            ONLY : Grid_getBlkPtr, Grid_releaseBlkPtr, &
-                                        Grid_getLeafIterator, &
-                                        Grid_releaseLeafIterator
+  use Grid_interface,            ONLY : Grid_getTileIterator, &
+                                        Grid_releaseTileIterator
   use Grid_data,                 ONLY : gr_justExchangedGC, &
                                         gr_eosMode, &
                                         gr_enableMaskedGCFill, &
@@ -119,8 +118,8 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
                                         gr_makeMaskConsistent_gen
   use gr_physicalMultifabs,      ONLY : unk, &
                                         facevarx, facevary, facevarz
-  use leaf_iterator,             ONLY : leaf_iterator_t
-  use block_metadata,            ONLY : block_metadata_t
+  use flash_iterator,            ONLY : flash_iterator_t
+  use flash_tile,                ONLY : flash_tile_t
 
 #include "Flash_mpi_implicitNone.fh"
 
@@ -139,9 +138,9 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
   logical,dimension(NUNK_VARS) :: gcell_on_cc
   integer :: guard, gcEosMode
   integer,dimension(MDIM) :: layers, returnLayers
-  real,pointer :: solnData(:,:,:,:) => null()
-  type(leaf_iterator_t)  :: itor
-  type(block_metadata_t) :: blockDesc
+  real,pointer :: solnData(:,:,:,:)
+  type(flash_iterator_t)  :: itor
+  type(flash_tile_t)      :: tileDesc
 
   integer :: ierr
 
@@ -172,6 +171,8 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
      call Driver_abortFlash("[Grid_fillGuardcell] invalid data structure")
   end if
 #endif
+
+  nullify(solnData)
 
   ! DEV: TODO Implement this functionality?
   if (       (gridDataStruct /= CENTER) .AND. (gridDataStruct /= CENTER_FACES) &
@@ -335,121 +336,127 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
        needEos = .FALSE.
     end if
 
-    call Grid_getLeafIterator(itor, tiling=.FALSE.)
+    call Grid_getTileIterator(itor, LEAF, tiling=.FALSE.)
     if (needEos .AND. needConversion) then
-       do while (itor%is_valid())
-          call itor%blkMetaData(blockDesc)
-          call Grid_getBlkPtr(blockDesc, solnData)
+       do while (itor%isValid())
+          call itor%currentTile(tileDesc)
+          call tileDesc%getDataPtr(solnData)
 
+          ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    solnData, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    NUNK_VARS)
-          call gr_conserveToPrimitive(blockDesc%limitsGC(LOW,  :), &
-                                      blockDesc%limitsGC(HIGH, :), &
+          call gr_conserveToPrimitive(tileDesc%limitsGC(LOW,  :), &
+                                      tileDesc%limitsGC(HIGH, :), &
                                       solnData, &
-                                      blockDesc%limitsGC(LOW,  :), &
-                                      blockDesc%limitsGC(HIGH, :), &
+                                      tileDesc%limitsGC(LOW,  :), &
+                                      tileDesc%limitsGC(HIGH, :), &
                                       NUNK_VARS, &
                                       UNK_VARS_BEGIN, NUNK_VARS)
           call gr_cleanEnergyData(gr_smalle, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   solnData, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   NUNK_VARS)
 
+          ! DEV: FIXME Does this work if solnData is from a tile?
           call Eos_guardCells(gcEosMode, solnData, corners=.true., &
                               layers=returnLayers)
 
-          call Grid_releaseBlkPtr(blockDesc, solnData)
+          call tileDesc%releaseDataPtr(solnData)
           call itor%next()
        end do
     else if (needEos .AND. (.NOT. needConversion)) then
-       do while (itor%is_valid())
-          call itor%blkMetaData(blockDesc)
-          call Grid_getBlkPtr(blockDesc, solnData)
+       do while (itor%isValid())
+          call itor%currentTile(tileDesc)
+          call tileDesc%getDataPtr(solnData)
 
+          ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    solnData, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    NUNK_VARS)
           call gr_cleanEnergyData(gr_smalle, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   solnData, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   NUNK_VARS)
 
+          ! DEV: FIXME Does this work if solnData is from a tile?
           call Eos_guardCells(gcEosMode, solnData, corners=.true., &
                               layers=returnLayers)
 
-          call Grid_releaseBlkPtr(blockDesc, solnData)
+          call tileDesc%releaseDataPtr(solnData)
           call itor%next()
        end do
     else if (needConversion) then
-       do while (itor%is_valid())
-          call itor%blkMetaData(blockDesc)
-          call Grid_getBlkPtr(blockDesc, solnData)
+       do while (itor%isValid())
+          call itor%currentTile(tileDesc)
+          call tileDesc%getDataPtr(solnData)
 
+          ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    solnData, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    NUNK_VARS)
-          call gr_conserveToPrimitive(blockDesc%limitsGC(LOW,  :), &
-                                      blockDesc%limitsGC(HIGH, :), &
+          call gr_conserveToPrimitive(tileDesc%limitsGC(LOW,  :), &
+                                      tileDesc%limitsGC(HIGH, :), &
                                       solnData, &
-                                      blockDesc%limitsGC(LOW,  :), &
-                                      blockDesc%limitsGC(HIGH, :), &
+                                      tileDesc%limitsGC(LOW,  :), &
+                                      tileDesc%limitsGC(HIGH, :), &
                                       NUNK_VARS, &
                                       UNK_VARS_BEGIN, NUNK_VARS)
           call gr_cleanEnergyData(gr_smalle, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   solnData, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   NUNK_VARS)
 
-          call Grid_releaseBlkPtr(blockDesc, solnData)
+          call tileDesc%releaseDataPtr(solnData)
           call itor%next()
        end do
     else
-       do while (itor%is_valid())
-          call itor%blkMetaData(blockDesc)
-          call Grid_getBlkPtr(blockDesc, solnData)
+       do while (itor%isValid())
+          call itor%currentTile(tileDesc)
+          call tileDesc%getDataPtr(solnData)
 
+          ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    solnData, &
-                                   blockDesc%limitsGC(LOW,  :), &
-                                   blockDesc%limitsGC(HIGH, :), &
+                                   tileDesc%limitsGC(LOW,  :), &
+                                   tileDesc%limitsGC(HIGH, :), &
                                    NUNK_VARS)
           call gr_cleanEnergyData(gr_smalle, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   solnData, &
-                                  blockDesc%limitsGC(LOW,  :), &
-                                  blockDesc%limitsGC(HIGH, :), &
+                                  tileDesc%limitsGC(LOW,  :), &
+                                  tileDesc%limitsGC(HIGH, :), &
                                   NUNK_VARS)
 
-          call Grid_releaseBlkPtr(blockDesc, solnData)
+          call tileDesc%releaseDataPtr(solnData)
           call itor%next()
        end do
     end if
-    call Grid_releaseLeafIterator(itor)
+    call Grid_releaseTileIterator(itor)
   end if   ! End CENTER or CENTER_FACES
 
 #if NFACE_VARS > 0

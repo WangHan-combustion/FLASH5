@@ -247,7 +247,9 @@ MASTER_PE is the designated master processor in a run.
 #define CENTER_FACES 380
 #define CELL_VOLUME 382
 #define CELL_FACEAREA 383
-
+#define FLUXX 401
+#define FLUXY 402
+#define FLUXZ 403
 
 #if 0
   Variable descriptors are used in some interfaces to identify
@@ -463,6 +465,12 @@ They are also used in other directionally split solvers as well.
 
 #define UNSPEC_LEVEL -1
 #define INVALID_LEVEL -5
+
+#if 0
+  These values are sometimes used when indexing blocks and tiles
+#endif
+
+#define INVALID_TILE_INDEX -1
 
 #if 0
   IO_output has an argument that takes an integer quantity that denotes
