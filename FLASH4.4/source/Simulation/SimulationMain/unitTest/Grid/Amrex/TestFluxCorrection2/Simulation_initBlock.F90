@@ -5,7 +5,7 @@
 !!
 !! SYNOPSIS
 !!  Simulation_initBlock(       real :: initData,
-!!                       integer(IN) :: block) 
+!!                       integer(IN) :: tileDesc) 
 !!
 !! DESCRIPTION
 !!  Initializes the cell-centered data to one.  For the purposes of this test, 
@@ -13,29 +13,29 @@
 !! 
 !! ARGUMENTS
 !!  initData - the cell-centered data structure to which data is written
-!!  block - index of block whose cell-centered data is to be initialized 
+!!  tileDesc - index of block whose cell-centered data is to be initialized 
 !!
 !!***
 
 #include "Flash.h"
 #include "constants.h"
 
-subroutine Simulation_initBlock(initData, block)
-    use block_metadata, ONLY : block_metadata_t
+subroutine Simulation_initBlock(initData, tileDesc)
+    use flash_tile, ONLY : flash_tile_t
 
     implicit none
 
-    real,                   pointer    :: initData(:, :, :, :)
-    type(block_metadata_t), intent(IN) :: block
+    real,               pointer    :: initData(:, :, :, :)
+    type(flash_tile_t), intent(IN) :: tileDesc
 
     integer :: i, j, k, var
 
-    associate(lo => block%limitsGC(LOW,  :), &
-              hi => block%limitsGC(HIGH, :))
-        do               k = lo(KAXIS), hi(KAXIS)
-            do           j = lo(JAXIS), hi(JAXIS)
-                do       i = lo(IAXIS), hi(IAXIS)
-                    do var = UNK_VARS_BEGIN, UNK_VARS_END
+    associate(lo => tileDesc%limits(LOW,  :), &
+              hi => tileDesc%limits(HIGH, :))
+        do           var = UNK_VARS_BEGIN, UNK_VARS_END
+            do         k = lo(KAXIS), hi(KAXIS)
+                do     j = lo(JAXIS), hi(JAXIS)
+                    do i = lo(IAXIS), hi(IAXIS)
                         initData(i, j, k, var) = 1.0
                     end do
                 end do
