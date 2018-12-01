@@ -132,6 +132,8 @@ contains
       integer :: finest_level
       logical :: is_lev_valid
 
+      nullify(itor%li)
+
       finest_level = amrex_get_finest_level() + 1
 
       associate(first => itor%first_level, &
@@ -192,6 +194,7 @@ contains
          end do
 
          deallocate(itor%li)
+         nullify(itor%li)
       end if
 
       itor%is_valid = .FALSE.
