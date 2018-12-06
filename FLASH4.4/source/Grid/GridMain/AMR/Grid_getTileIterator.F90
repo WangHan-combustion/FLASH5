@@ -36,7 +36,11 @@
 !!
 !!***
 
-subroutine Grid_getTileIterator(itor, nodetype, level, tiling)
+#include "constants.h"
+
+subroutine Grid_getTileIterator(itor, nodetype, level, tiling, tileSize)
+  use Grid_data,      ONLY : gr_enableTiling, &
+                             gr_tileSize
   use flash_iterator, ONLY : flash_iterator_t, build_iterator
 
   implicit none
@@ -45,7 +49,26 @@ subroutine Grid_getTileIterator(itor, nodetype, level, tiling)
   integer,                intent(IN)           :: nodetype
   integer,                intent(IN), optional :: level
   logical,                intent(IN), optional :: tiling
+  integer,                intent(IN), optional :: tileSize
 
-  call build_iterator(itor, nodetype, level, tiling)
+  integer :: myLevel
+  logical :: myTiling
+  integer :: myTileSize(1:MDIM)
+
+  myLevel = UNSPEC_LEVEL
+  if (present(level)) then
+    myLevel = level
+  end if
+
+  myTiling = .FALSE.
+  if (gr_enableTiling .AND. present(tiling)) then
+    myTiling = tiling
+  end if
+
+  if (.NOT. present(tileSize)) then
+    myTileSize = [gr_tileSize(IAXIS), gr_tileSize(JAXIS), gr_tileSize(KAXIS)]
+  end if
+
+  call build_iterator(itor, nodetype, myLevel, myTiling, myTileSize)
 end subroutine Grid_getTileIterator
 

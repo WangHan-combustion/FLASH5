@@ -470,13 +470,14 @@ module gr_interface
   end interface
 
   interface
-    subroutine gr_getBlkIterator(itor, nodetype, level, tiling)
+    subroutine gr_getBlkIterator(itor, nodetype, level, tiling, tileSize)
       use gr_iterator, ONLY : gr_iterator_t
       implicit none
       type(gr_iterator_t), intent(OUT)          :: itor
       integer,             intent(IN), optional :: nodetype
       integer,             intent(IN), optional :: level
       logical,             intent(IN), optional :: tiling
+      integer,             intent(IN), optional :: tileSize
     end subroutine gr_getBlkIterator
   end interface
 

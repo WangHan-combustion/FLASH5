@@ -79,7 +79,7 @@ module leaf_iterator
     !!        1-based level indexing.
     !!****
     type, public :: leaf_iterator_t
-        type(block_1lev_iterator_t), private, pointer :: li(:)
+        type(block_1lev_iterator_t), private, pointer :: li(:) => null()
         integer                 :: first_level   = INVALID_LEVEL
         integer                 :: last_level    = INVALID_LEVEL
         integer                 :: level    = INVALID_LEVEL
@@ -206,12 +206,13 @@ contains
     !! SEE ALSO
     !!  constants.h
     !!****
-    subroutine init_iterator(itor, level, tiling)
+    subroutine init_iterator(itor, level, tiling, tileSize)
       use gr_physicalMultifabs,  ONLY : Unk
 
-        type(leaf_iterator_t), intent(OUT)          :: itor
-        integer,                intent(IN), optional :: level
-        logical,                intent(IN), optional :: tiling
+        type(leaf_iterator_t), intent(OUT) :: itor
+        integer,               intent(IN), optional :: level
+        logical,               intent(IN)  :: tiling
+        integer,               intent(IN)  :: tileSize(1:MDIM)
 
         integer :: lev, first, last
         integer :: finest_level
@@ -236,7 +237,7 @@ contains
 
 
         do lev=first,last
-            itor%li(lev) = block_1lev_iterator_t(LEAF,lev,tiling=tiling)
+            itor%li(lev) = block_1lev_iterator_t(LEAF,lev,tiling,tileSize)
             v = itor%li( lev )%is_valid()
             if (v .AND. .NOT. itor%isValid) then
                itor%isValid = .TRUE.
@@ -273,6 +274,7 @@ contains
 
          end do
          deallocate(itor%li)
+         nullify(itor%li)
       end if
       itor%isValid = .FALSE.
 

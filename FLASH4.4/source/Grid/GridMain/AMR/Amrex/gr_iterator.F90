@@ -68,11 +68,11 @@ module gr_iterator
     !!        1-based level indexing.
     !!****
     type, public :: gr_iterator_t
-        type(block_1lev_iterator_t), private, pointer :: li(:)
-        integer,                     private              :: first_level = INVALID_LEVEL
-        integer,                     private              :: last_level  = INVALID_LEVEL
-        integer,                     private              :: level       = INVALID_LEVEL
-        logical,                     private              :: isValid     = .FALSE.
+        type(block_1lev_iterator_t), private, pointer :: li(:)       => null()
+        integer,                     private          :: first_level = INVALID_LEVEL
+        integer,                     private          :: last_level  = INVALID_LEVEL
+        integer,                     private          :: level       = INVALID_LEVEL
+        logical,                     private          :: isValid     = .FALSE.
     contains
         procedure, public :: is_valid
         procedure, public :: next
@@ -125,13 +125,14 @@ contains
     !! SEE ALSO
     !!  constants.h
     !!****
-    subroutine init_iterator(itor, nodetype, level, tiling)
+    subroutine init_iterator(itor, nodetype, level, tiling, tileSize)
       use amrex_amrcore_module,  ONLY : amrex_get_finest_level
 
-      type(gr_iterator_t), intent(OUT)          :: itor
-      integer,             intent(IN)           :: nodetype
-      integer,             intent(IN), optional :: level
-      logical,             intent(IN), optional :: tiling
+      type(gr_iterator_t), intent(OUT) :: itor
+      integer,             intent(IN)  :: nodetype
+      integer,             intent(IN), optional  :: level
+      logical,             intent(IN)  :: tiling
+      integer,             intent(IN)  :: tileSize(1:MDIM)
 
       integer :: lev
       integer :: finest_level
@@ -164,7 +165,7 @@ contains
         allocate( itor%li(first : last) )
 
         do lev=first, last
-            itor%li(lev) = block_1lev_iterator_t(nodetype, lev, tiling=tiling)
+            itor%li(lev) = block_1lev_iterator_t(nodetype, lev, tiling, tileSize)
             is_lev_valid = itor%li(lev)%is_valid()
             if (is_lev_valid .AND. .NOT. itor%isValid) then
                itor%isValid = .TRUE.
@@ -198,6 +199,7 @@ contains
 
          end do
          deallocate(itor%li)
+         nullify(itor%li)
       end if
       itor%isValid = .FALSE.
     end subroutine destroy_iterator

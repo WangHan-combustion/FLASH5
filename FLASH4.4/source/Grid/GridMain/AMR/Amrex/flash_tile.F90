@@ -83,7 +83,6 @@ module flash_tile
         integer, public :: limitsGC(LOW:HIGH, MDIM)
         integer, public :: blkLimitsGC(LOW:HIGH, MDIM)
     contains
-        procedure, public :: isBlock
         procedure, public :: deltas
         procedure, public :: boundBox
         procedure, public :: coordinates
@@ -98,13 +97,6 @@ module flash_tile
     end type flash_tile_t
 
 contains
-
-    function isBlock(this)
-        class(flash_tile_t), intent(IN) :: this
-        logical :: isBlock
-
-        isBlock = (this%tile_index /= INVALID_TILE_INDEX)
-    end function isBlock
 
     subroutine deltas(this, dx)
         use amrex_amrcore_module, ONLY : amrex_geom
@@ -213,7 +205,7 @@ contains
 
         block%level      = tile%level
         block%grid_index = tile%grid_index
-        block%tile_index = INVALID_TILE_INDEX
+        block%tile_index = 0
 
         ! The boxes in the boxarray describe the interiors of
         ! our blocks

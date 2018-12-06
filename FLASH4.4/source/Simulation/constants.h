@@ -467,12 +467,6 @@ They are also used in other directionally split solvers as well.
 #define INVALID_LEVEL -5
 
 #if 0
-  These values are sometimes used when indexing blocks and tiles
-#endif
-
-#define INVALID_TILE_INDEX -1
-
-#if 0
   IO_output has an argument that takes an integer quantity that denotes
   the type(s) of output files requested at that particular call.
 #endif

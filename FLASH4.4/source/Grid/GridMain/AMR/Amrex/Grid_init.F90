@@ -209,6 +209,16 @@ subroutine Grid_init()
   ! angle value parameters that are expressed in degrees to radians.
   call gr_initGeometry()
 
+!------------------------------------------------------------------------------
+! Load into local Grid variables all runtime parameters needed by gr_amrexInit
+!------------------------------------------------------------------------------
+  call RuntimeParameters_get("gr_amrexUseTiling", gr_enableTiling)
+  call RuntimeParameters_get("gr_amrexTileSizeX", gr_tileSize(IAXIS))
+  call RuntimeParameters_get("gr_amrexTileSizeY", gr_tileSize(JAXIS))
+  call RuntimeParameters_get("gr_amrexTileSizeZ", gr_tileSize(KAXIS))
+  write(*,*) "Block size = ", NXB, NYB, NZB
+  write(*,*) "Tile size  = ", gr_tileSize
+
 !----------------------------------------------------------------------------------
 ! Initialize AMReX
 !----------------------------------------------------------------------------------
@@ -224,7 +234,6 @@ subroutine Grid_init()
 
   ASSERT(NDIM==amrex_spacedim)
   ASSERT(N_DIM==amrex_spacedim)
-
 
   ! Save BC information for AMReX callbacks
   lo_bc_amrex(:, :) = amrex_bc_int_dir

@@ -65,7 +65,7 @@ module flash_iterator
     !!        1-based level indexing.
     !!****
     type, public :: flash_iterator_t
-        type(block_1lev_iterator_t), private, pointer :: li(:)
+        type(block_1lev_iterator_t), private, pointer :: li(:)       => null()
         integer,                     private          :: first_level = INVALID_LEVEL
         integer,                     private          :: last_level  = INVALID_LEVEL
         integer,                     private          :: level       = INVALID_LEVEL
@@ -120,48 +120,44 @@ contains
     !!             the iterator will iterate on a block-by-block basis.
     !!
     !!****
-    subroutine init_iterator(itor, nodetype, level, tiling)
+    subroutine init_iterator(itor, nodetype, level, tiling, tileSize)
       use amrex_amrcore_module, ONLY : amrex_get_finest_level
 
-      type(flash_iterator_t), intent(OUT)          :: itor
-      integer,                intent(IN)           :: nodetype
-      integer,                intent(IN), optional :: level
-      logical,                intent(IN), optional :: tiling
+      type(flash_iterator_t), intent(OUT) :: itor
+      integer,                intent(IN)  :: nodetype
+      integer,                intent(IN)  :: level
+      logical,                intent(IN)  :: tiling
+      integer,                intent(IN)  :: tileSize(1:MDIM)
 
       integer :: lev
       integer :: finest_level
       logical :: is_lev_valid
 
-      nullify(itor%li)
-
       finest_level = amrex_get_finest_level() + 1
 
       associate(first => itor%first_level, &
                 last  => itor%last_level)
-        if (present(level)) then
-           if (level .NE. UNSPEC_LEVEL) then
-            ! Construct do nothing iterator if no blocks on level
-              if (level > finest_level) then
-                 itor%is_valid = .FALSE.
-                 RETURN
-              end if
-
-              first = level
-              last = level
-           else
-              first = 1
-              last = finest_level
+        if (level .NE. UNSPEC_LEVEL) then
+         ! Construct do nothing iterator if no blocks on level
+           if (level > finest_level) then
+              itor%is_valid = .FALSE.
+              RETURN
            end if
+
+           first = level
+           last = level
         else
-            first = 1
-            last = finest_level
+           first = 1
+           last = finest_level
         end if
         itor%level = first
  
         allocate( itor%li(first : last) )
 
         do lev=first, last
-            itor%li(lev) = block_1lev_iterator_t(nodetype, lev, tiling=tiling)
+            itor%li(lev) = block_1lev_iterator_t(nodetype, lev, &
+                                                 tiling=tiling, &
+                                                 tileSize=tileSize)
             is_lev_valid = itor%li(lev)%is_valid()
             if (is_lev_valid .AND. .NOT. itor%is_valid) then
                itor%is_valid = .TRUE.
@@ -279,7 +275,7 @@ contains
 
         tileDesc%level      = this%level
         tileDesc%grid_index = this%li( this%level )%grid_index()
-        tileDesc%tile_index = INVALID_TILE_INDEX
+        tileDesc%tile_index = this%li( this%level )%local_tile_index()
 
         ! FLASH uses 1-based spatial indices / AMReX uses 0-based
         box = this%li( this%level )%tilebox()

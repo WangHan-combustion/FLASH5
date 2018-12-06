@@ -34,7 +34,11 @@
 !!
 !!***
 
-subroutine Grid_getLeafIterator(itor, level, tiling)
+#include "constants.h"
+
+subroutine Grid_getLeafIterator(itor, level, tiling, tileSize)
+  use Grid_data,     ONLY : gr_enableTiling, &
+                            gr_tileSize
   use leaf_iterator, ONLY : leaf_iterator_t, build_iterator
 
   implicit none
@@ -42,7 +46,26 @@ subroutine Grid_getLeafIterator(itor, level, tiling)
   type(leaf_iterator_t), intent(OUT)          :: itor
   integer,               intent(IN), optional :: level
   logical,               intent(IN), optional :: tiling
+  integer,               intent(IN), optional :: tileSize
+  
+  integer :: myLevel
+  logical :: myTiling
+  integer :: myTileSize(1:MDIM)
 
-  call build_iterator(itor, level, tiling)
+  myLevel = UNSPEC_LEVEL
+  if (present(level)) then
+    myLevel = level
+  end if
+
+  myTiling = .FALSE.
+  if (gr_enableTiling .AND. present(tiling)) then
+    myTiling = tiling
+  end if
+
+  if (.NOT. present(tileSize)) then
+    myTileSize = [gr_tileSize(IAXIS), gr_tileSize(JAXIS), gr_tileSize(KAXIS)]
+  end if
+  
+  call build_iterator(itor, myLevel, myTiling, myTileSize)
 end subroutine Grid_getLeafIterator
 

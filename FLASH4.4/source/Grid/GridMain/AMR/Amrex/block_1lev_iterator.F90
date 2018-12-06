@@ -59,6 +59,7 @@ module block_1lev_iterator
         procedure, public :: is_valid
         procedure, public :: next
         procedure, public :: grid_index
+        procedure, public :: local_tile_index
         procedure, public :: tilebox
         procedure, public :: growntilebox
         procedure, public :: fabbox
@@ -136,14 +137,15 @@ contains
       end if
   end function init_iterator_mf
 
-    function init_iterator(nodetype, level, tiling) result(this)
+    function init_iterator(nodetype, level, tiling, tileSize) result(this)
       use Driver_interface,      ONLY : Driver_abortFlash
       use gr_physicalMultifabs,  ONLY : unk
       use amrex_amrcore_module,  ONLY : amrex_get_finest_level
 
-      integer, intent(IN)           :: nodetype
-      integer, intent(IN)           :: level
-      logical, intent(IN), optional :: tiling
+      integer, intent(IN) :: nodetype
+      integer, intent(IN) :: level
+      logical, intent(IN) :: tiling
+      integer, intent(IN) :: tileSize(1:MDIM)
       type(block_1lev_iterator_t)   :: this
 
       integer :: finest_level
@@ -169,7 +171,11 @@ contains
       if (c_associated(this%mf%p)) then
 
          allocate(this%mfi)
-         call amrex_mfiter_build(this%mfi, this%mf, tiling=tiling)
+         if (tiling) then
+           call amrex_mfiter_build(this%mfi, this%mf, tileSize=tileSize)
+         else
+           call amrex_mfiter_build(this%mfi, this%mf, tiling=.FALSE.)
+         end if
 
          ! Set to True so that next() works
          this%isValid = .TRUE.
@@ -323,6 +329,26 @@ contains
 
       idx = this%mfi%grid_index()
     end function grid_index
+
+    !!****m* block_1lev_iterator_t/local_tile_index
+    !!
+    !! NAME
+    !!  local_tile_index
+    !!
+    !! SYNPOSIS
+    !!  idx = itor%local_tile_index()
+    !!
+    !! DESCRIPTION
+    !!  Advance the iterator to the next block managed by process and that meets
+    !!  the iterator constraints given at instantiation.
+    !!
+    !!****
+    function local_tile_index(this) result(idx)
+      class(block_1lev_iterator_t), intent(IN) :: this
+      integer                                  :: idx
+
+      idx = this%mfi%local_tile_index()
+    end function local_tile_index
 
     !!****m* block_1lev_iterator_t/tilebox
     !!

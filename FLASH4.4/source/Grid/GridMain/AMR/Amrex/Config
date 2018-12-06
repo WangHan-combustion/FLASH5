@@ -50,3 +50,14 @@ PARAMETER enableMaskedGCFill BOOLEAN FALSE
 D amrexInterpolator Name of AMReX interpolator to use
 PARAMETER amrexInterpolator STRING "CELL_CONSERVATIVE_LINEAR"
 
+D gr_amrexUseTiling Global switch to enable tiling where implemented or to turn
+D &                 off all tiling
+PARAMETER gr_amrexUseTiling BOOLEAN FALSE
+
+D gr_amrexTileSize[XYZ] Specify the size of each tile along the indicated
+D &                     direction.  This is a general use tile size and any
+D &                     iterator loop may override these with its own tile size.
+PARAMETER gr_amrexTileSizeX INTEGER NXB [ 1 ... ]
+PARAMETER gr_amrexTileSizeY INTEGER NYB [ 1 ... ]
+PARAMETER gr_amrexTileSizeZ INTEGER NZB [ 1 ... ]
+

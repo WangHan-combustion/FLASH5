@@ -44,7 +44,9 @@
 
 #include "constants.h"
 
-subroutine gr_getBlkIterator(itor, nodetype, level, tiling)
+subroutine gr_getBlkIterator(itor, nodetype, level, tiling, tileSize)
+  use Grid_data,        ONLY : gr_enableTiling, &
+                               gr_tileSize
   use gr_iterator,      ONLY : gr_iterator_t, build_iterator
 
   implicit none
@@ -53,14 +55,33 @@ subroutine gr_getBlkIterator(itor, nodetype, level, tiling)
   integer,             intent(IN), optional :: nodetype
   integer,             intent(IN), optional :: level
   logical,             intent(IN), optional :: tiling
+  integer,             intent(IN), optional :: tileSize
 
   integer :: ntype
+  
+  integer :: myLevel
+  logical :: myTiling
+  integer :: myTileSize(1:MDIM)
+
+  myLevel = UNSPEC_LEVEL
+  if (present(level)) then
+    myLevel = level
+  end if
 
   ntype = ALL_BLKS
   if (present(nodetype)) then
     ntype = nodetype 
   end if
+  
+  myTiling = .FALSE.
+  if (gr_enableTiling .AND. present(tiling)) then
+    myTiling = tiling
+  end if
 
-  call build_iterator(itor, ntype, level, tiling)
+  if (.NOT. present(tileSize)) then
+    myTileSize = [gr_tileSize(IAXIS), gr_tileSize(JAXIS), gr_tileSize(KAXIS)]
+  end if
+
+  call build_iterator(itor, ntype, myLevel, myTiling, myTileSize)
 end subroutine gr_getBlkIterator
 
