@@ -91,9 +91,9 @@ module flash_tile
 !        procedure, public :: physicalSize
 !        procedure, public :: onDomainBoundary
 !        procedure, public :: outsideDomain
-        procedure, public :: parentBlock
         procedure, public :: getDataPtr
         procedure, public :: releaseDataPtr
+        procedure, public :: enclosingBlock
     end type flash_tile_t
 
 contains
@@ -189,40 +189,43 @@ contains
         end associate
     end subroutine coordinates
 
-    subroutine parentBlock(tile, block)
+    function enclosingBlock(this)
         use amrex_fort_module,    ONLY : wp => amrex_real
         use amrex_box_module,     ONLY : amrex_box
 
         use gr_physicalMultifabs, ONLY : unk
 
-        class(flash_tile_t), intent(IN)  :: tile
-        type(flash_tile_t),  intent(OUT) :: block
+        class(flash_tile_t), intent(IN)  :: this
+        type(flash_tile_t)               :: enclosingBlock
 
         type(amrex_box) :: parent_box
         integer         :: idx(1:MDIM+1)
-        
+
         real(wp), pointer :: parent_dataPtr(:, :, :, :)
 
-        block%level      = tile%level
-        block%grid_index = tile%grid_index
-        block%tile_index = 0
+        enclosingBlock%level      = this%level
+        enclosingBlock%grid_index = this%grid_index
+        enclosingBlock%tile_index = 0
 
-        ! The boxes in the boxarray describe the interiors of
-        ! our blocks
-        parent_box = unk(tile%level)%ba%get_box(tile%grid_index)
-        block%limits(:, :) = 1
-        block%limits(LOW,  1:NDIM) = parent_box%lo(1:NDIM) + 1
-        block%limits(HIGH, 1:NDIM) = parent_box%hi(1:NDIM) + 1
+        associate(level => this%level - 1, &
+                  gId   => this%grid_index)
+            ! The boxes in the boxarray describe the interiors of
+            ! our blocks
+            parent_box = unk(level)%ba%get_box(gId)
+            enclosingBlock%limits(:, :) = 1
+            enclosingBlock%limits(LOW,  1:NDIM) = parent_box%lo(1:NDIM) + 1
+            enclosingBlock%limits(HIGH, 1:NDIM) = parent_box%hi(1:NDIM) + 1
 
-        ! The blkLimitsGC are by definition the limits of the
-        ! parent block's FAB
-        parent_dataPtr = unk(tile%level)%dataptr(tile%grid_index)
-        block%blkLimitsGC(:, :) = 1
-        idx(:) = lbound(parent_dataPtr)
-        block%blkLimitsGC(LOW,  1:NDIM) = idx(1:NDIM) + 1
-        idx(:) = ubound(parent_dataPtr)
-        block%blkLimitsGC(HIGH, 1:NDIM) = idx(1:NDIM) + 1
-    end subroutine parentBlock
+            call parent_box%grow(NGUARD)
+            enclosingBlock%limitsGC(:, :) = 1
+            enclosingBlock%limitsGC(LOW,  1:NDIM) = parent_box%lo(1:NDIM) + 1
+            enclosingBlock%limitsGC(HIGH, 1:NDIM) = parent_box%hi(1:NDIM) + 1
+
+            enclosingBlock%blkLimitsGC(:, :) = 1
+            enclosingBlock%blkLimitsGC(LOW,  1:NDIM) = parent_box%lo(1:NDIM) + 1
+            enclosingBlock%blkLimitsGC(HIGH, 1:NDIM) = parent_box%hi(1:NDIM) + 1
+        end associate
+    end function enclosingBlock
 
     ! DEV: If the client code requests a pointer to data that is not 
     ! included in the problem, this routine will return a null pointer

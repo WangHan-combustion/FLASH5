@@ -1,4 +1,4 @@
-!!****if* source/Simulation/SimulationMain/unitTest/Grid/Amrex/TestInit/Driver_evolveFlash
+!!****if* source/Simulation/SimulationMain/unitTest/Grid/Amrex/TestTiling/Driver_evolveFlash
 !!
 !! NAME
 !!
@@ -9,27 +9,17 @@
 !!  Driver_evolveFlash()
 !!
 !! DESCRIPTION
-!!  A subset of simulation configuration data is loaded into AMReX at
-!!  initialization and is therefore owned by AMReX.  As a result, AMReX is used
-!!  to provide these data values to client code through the associated public
-!!  Grid_* and local gr_* interface accessor routines.
-!!
-!!  This code tests that AMReX is properly initialized for a Cartesian domain by
-!!  verifying correct results as obtained through the accessor routines.
-!!
+!!  This unit test exercises the flash_iterator and flash_tile objects both with
+!!  and without tiling enabled to confirm that iterating over tiles in accord
+!!  with tiling runtime parameters is correct.  In addition, it confirms that
+!!  tiling related features of the flash_tile_t objects are correct.
+!!  
 !! NOTES
 !!  This simulation *must* be configured with at least the following
 !!  2D run:
-!!     ./setup -auto -2d -nxb=8 -nyb=4 
-!!              unitTest/Grid/Amrex/TestInit 
+!!     ./setup -auto -2d -nxb=8 -nyb=8 
+!!              unitTest/Grid/Amrex/TestTiling
 !!             +noio -index-reorder
-!!  3D run:
-!!     ./setup -auto -3d -nxb=8 -nyb=4 -nzb=2
-!!              unitTest/Grid/Amrex/TestInit 
-!!             +noio -index-reorder
-!!
-!!  For the future:
-!!             -unit=IO/IOMain/hdf5/serial/AM
 !!
 !!***
 
@@ -37,6 +27,8 @@
 #include "constants.h"
 
 subroutine Driver_evolveFlash()
+    use amrex_box_module,      ONLY : amrex_box
+
     use flash_iterator,        ONLY : flash_iterator_t
     use flash_tile,            ONLY : flash_tile_t
     use Grid_interface,        ONLY : Grid_getTileIterator, &
@@ -51,10 +43,17 @@ subroutine Driver_evolveFlash()
 
     type(flash_iterator_t) :: itor
     type(flash_tile_t)     :: tileDesc
+    type(flash_tile_t)     :: encBlk
+
+    type(amrex_box) :: tileBox
+    type(amrex_box) :: encBox
+
+    integer :: axis
 
     call start_test_run
 
-    ! Confirm contents of parfile
+    ! Confirm contents of parfile that are hardcoded into the expected results
+    ! and behavior of the tests
     call assertTrue(gr_enableTiling, "Tiling not enabled")
     call assertEqual(gr_tileSize(IAXIS), 4, "Incorrect X tile size")
     call assertEqual(gr_tileSize(JAXIS), 2, "Incorrect Y tile size")
@@ -66,6 +65,8 @@ subroutine Driver_evolveFlash()
 
     call assertEqual(NGUARD, 2, "Invalid number of guardcells")
 
+    ! *NO* TILING ITERATION
+    ! -----------------------------------------------------------------------
     ! Get total blocks by explicitly turning off tiling at iterator creation
     cnt = 0
     call Grid_getTileIterator(itor, ALL_BLKS, tiling=.FALSE.)
@@ -78,16 +79,54 @@ subroutine Driver_evolveFlash()
                   hiGC    => tileDesc%limitsGC(HIGH, :), &
                   blkloGC => tileDesc%blkLimitsGC(LOW,  :), &
                   blkhiGC => tileDesc%blkLimitsGC(HIGH, :))
+            ! Confirm that the tile we are given has the size of a block
+            ! (the trivial tiling)
             call assertEqual(NXB, hi(IAXIS) - lo(IAXIS) + 1, "Invalid tile x-length")
             call assertEqual(NYB, hi(JAXIS) - lo(JAXIS) + 1, "Invalid tile y-length")
             call assertEqual(NZB, hi(KAXIS) - lo(KAXIS) + 1, "Invalid tile z-length")
 
-            call assertEqual(NXB+2*NGUARD, hiGC(IAXIS) - loGC(IAXIS) + 1, "Invalid tile x-length")
-            call assertEqual(NYB+2*NGUARD, hiGC(JAXIS) - loGC(JAXIS) + 1, "Invalid tile y-length")
-            call assertEqual(NZB,          hiGC(KAXIS) - loGC(KAXIS) + 1, "Invalid tile z-length")
+            ! Confirm that limitsGC has the size of the block interior + GC halo 
+            call assertEqual(NXB+K1D*2*NGUARD, hiGC(IAXIS) - loGC(IAXIS) + 1, &
+                             "Invalid tileGC x-length")
+            call assertEqual(NYB+K2D*2*NGUARD, hiGC(JAXIS) - loGC(JAXIS) + 1, &
+                             "Invalid tileGC y-length")
+            call assertEqual(NZB+K3D*2*NGUARD, hiGC(KAXIS) - loGC(KAXIS) + 1, &
+                             "Invalid tileGC z-length")
 
-            call assertTrue(ALL(loGC == blkLoGC), "blkLimitsGC low != limitsGC low for block")
-            call assertTrue(ALL(hiGC == blkHiGC), "blkLimitsGC high != limitsGC high for block")
+            ! When the tile is a block, then the grown tile is the
+            ! interior + GC halo
+            call assertTrue(ALL(loGC == blkLoGC), &
+                            "blkLimitsGC low != limitsGC low for block")
+            call assertTrue(ALL(hiGC == blkHiGC), &
+                            "blkLimitsGC high != limitsGC high for block")
+        end associate
+
+        ! Confirm that when the tile is a block that the enclosing block is the
+        ! tile itself
+        encBlk = tileDesc%enclosingBlock()
+        call assertEqual(encBlk%grid_index, tileDesc%grid_index, &
+                         "Incorrect enclosing block grid index")
+        call assertEqual(encBlk%tile_index, tileDesc%tile_index, &
+                         "Incorrect enclosing block tile index")
+ 
+        associate(lo      => encBlk%limits(LOW,  :), &
+                  hi      => encBlk%limits(HIGH, :), &
+                  loGC    => encBlk%limitsGC(LOW,  :), &
+                  hiGC    => encBlk%limitsGC(HIGH, :), &
+                  blkloGC => encBlk%blkLimitsGC(LOW,  :), &
+                  blkhiGC => encBlk%blkLimitsGC(HIGH, :))
+            call assertTrue(ALL(lo == tileDesc%limits(LOW,  :)), &
+                            "Bad enclosed block limits LOW")
+            call assertTrue(ALL(hi == tileDesc%limits(HIGH, :)), &
+                            "Bad enclosed block limits HIGH")
+            call assertTrue(ALL(loGC == tileDesc%limitsGC(LOW,  :)), &
+                            "Bad enclosed block limitsGC LOW")
+            call assertTrue(ALL(hiGC == tileDesc%limitsGC(HIGH, :)), &
+                            "Bad enclosed block limitsGC HIGH")
+            call assertTrue(ALL(blkloGC == tileDesc%blkLimitsGC(LOW,  :)), &
+                            "Bad enclosed block blkLimitsGC LOW")
+            call assertTrue(ALL(blkhiGC == tileDesc%blkLimitsGC(HIGH, :)), &
+                            "Bad enclosed block blkLimitsGC HIGH")
         end associate
 
         cnt = cnt + 1
@@ -97,6 +136,8 @@ subroutine Driver_evolveFlash()
     call Grid_releaseTileIterator(itor)
     call assertEqual(cnt, 2, "Incorrect number of blocks")
 
+    ! *YES* TILING ITERATION
+    ! -----------------------------------------------------------------------
     cnt = 0
     call Grid_getTileIterator(itor, ALL_BLKS, tiling=.TRUE.)
     do while(itor%isValid())
@@ -108,19 +149,26 @@ subroutine Driver_evolveFlash()
                   hiGC    => tileDesc%limitsGC(HIGH, :), &
                   blkloGC => tileDesc%blkLimitsGC(LOW,  :), &
                   blkhiGC => tileDesc%blkLimitsGC(HIGH, :))
-
             ! Confirm appropriate size of tile (the interior)
-            call assertEqual(4, hi(IAXIS) - lo(IAXIS) + 1, "Invalid tile x-length")
-            call assertEqual(2, hi(JAXIS) - lo(JAXIS) + 1, "Invalid tile y-length")
-            call assertEqual(1, hi(KAXIS) - lo(KAXIS) + 1, "Invalid tile z-length")
+            do axis = 1, MDIM
+                call assertEqual(gr_tileSize(axis), hi(axis) - lo(axis) + 1, &
+                                 "Invalid tile length")
+            end do 
 
             ! Confirm that the grown tile has been grown appropriately
+            ! Two blocks in x direction
             if      (lo(IAXIS) == 1) then
                 call assertEqual(-1, loGC(IAXIS), "Invalid grown tile lo x")
                 call assertEqual( 4, hiGC(IAXIS), "Invalid grown tile hi x")
             else if (lo(IAXIS) == 5) then
                 call assertEqual( 5, loGC(IAXIS), "Invalid grown tile lo x")
                 call assertEqual(10, hiGC(IAXIS), "Invalid grown tile hi x")
+            else if (lo(IAXIS) == 9) then
+                call assertEqual( 7, loGC(IAXIS), "Invalid grown tile lo x")
+                call assertEqual(12, hiGC(IAXIS), "Invalid grown tile hi x")
+            else if (lo(IAXIS) == 13) then
+                call assertEqual(13, loGC(IAXIS), "Invalid grown tile lo x")
+                call assertEqual(18, hiGC(IAXIS), "Invalid grown tile hi x")
             end if
 
             if      (lo(JAXIS) == 1) then
@@ -138,12 +186,52 @@ subroutine Driver_evolveFlash()
             end if
 
             call assertEqual(1, loGC(KAXIS), "Invalid grown tile lo z")
-            call assertEqual(1, hiGC(KAXIS), "Invalid grown tile lo z")
+            call assertEqual(1, hiGC(KAXIS), "Invalid grown tile hi z")
 
-            ! The limits of the enclosing block should be the same
-            call assertEqual(NXB+2*NGUARD, blkhiGC(IAXIS) - blkloGC(IAXIS) + 1, "Invalid tile x-length")
-            call assertEqual(NYB+2*NGUARD, blkhiGC(JAXIS) - blkloGC(JAXIS) + 1, "Invalid tile y-length")
-            call assertEqual(NZB,          blkhiGC(KAXIS) - blkloGC(KAXIS) + 1, "Invalid tile z-length")
+            ! The size of blkLimitsGC should be that for a block
+            call assertEqual(NXB+K1D*2*NGUARD, blkhiGC(IAXIS) - blkloGC(IAXIS) + 1, "Invalid tile x-length")
+            call assertEqual(NYB+K2D*2*NGUARD, blkhiGC(JAXIS) - blkloGC(JAXIS) + 1, "Invalid tile y-length")
+            call assertEqual(NZB+K3D*2*NGUARD, blkhiGC(KAXIS) - blkloGC(KAXIS) + 1, "Invalid tile z-length")
+        end associate
+
+        encBlk = tileDesc%enclosingBlock()
+
+        tileBox = amrex_box(tileDesc%limits(LOW, :), tileDesc%limits(HIGH, :))
+        encBox  = amrex_box(encBlk%limits(LOW, :), encBlk%limits(HIGH, :))
+        call assertTrue(encBox%contains(tileBox), &
+                        "tile not contained in enclosing block")
+
+        associate(lo      => encBlk%limits(LOW,  :), &
+                  hi      => encBlk%limits(HIGH, :), &
+                  loGC    => encBlk%limitsGC(LOW,  :), &
+                  hiGC    => encBlk%limitsGC(HIGH, :), &
+                  blkloGC => encBlk%blkLimitsGC(LOW,  :), &
+                  blkhiGC => encBlk%blkLimitsGC(HIGH, :))
+            call assertEqual(NXB, hi(IAXIS) - lo(IAXIS) + 1, &
+                             "Enclosing block has wrong X length")
+            call assertEqual(NYB, hi(JAXIS) - lo(JAXIS) + 1, &
+                             "Enclosing block has wrong Y length")
+            call assertEqual(NZB, hi(KAXIS) - lo(KAXIS) + 1, &
+                             "Enclosing block has wrong Z length")
+
+            call assertEqual(NXB+K1D*2*NGUARD, hiGC(IAXIS) - loGC(IAXIS) + 1, &
+                             "Enclosing block has wrong X length")
+            call assertEqual(NYB+K2D*2*NGUARD, hiGC(JAXIS) - loGC(JAXIS) + 1, &
+                             "Enclosing block has wrong Y length")
+            call assertEqual(NZB+K3D*2*NGUARD, hiGC(KAXIS) - loGC(KAXIS) + 1, &
+                             "Enclosing block has wrong Z length")
+
+            ! If it is a block, then blkLimitsGC = limitsGC
+            call assertTrue(ALL(encBlk%blkLimitsGC(LOW,  :) == encBlk%limitsGC(LOW, :)), &
+                            "enclosing blocks blkLimitsGC low != limitsGC low")
+            call assertTrue(ALL(encBlk%blkLimitsGC(HIGH, :) == encBlk%limitsGC(HIGH, :)), &
+                            "enclosing blocks blkLimitsGC high != limitsGC high")
+
+            ! The blkLimitsGC of the block should be limitsGC of enclosing block
+            call assertTrue(ALL(tileDesc%blkLimitsGC(LOW,  :) == encBlk%limitsGC(LOW, :)), &
+                            "tile blkLimitsGC low != enc block limitsGC low")
+            call assertTrue(ALL(tileDesc%blkLimitsGC(HIGH, :) == encBlk%limitsGC(HIGH, :)), &
+                            "tile blkLimitsGC high != enc block limitsGC high")
         end associate
 
         cnt = cnt + 1
@@ -151,7 +239,7 @@ subroutine Driver_evolveFlash()
         call itor%next()
     end do
     call Grid_releaseTileIterator(itor)
-    call assertEqual(cnt, 16, "Incorrect number of blocks")
+    call assertEqual(cnt, 16, "Incorrect number of tiles")
 
     ! OVERLOAD RUNTIME PARAMETERS
     ! This is not an expected use, but it is available
@@ -167,7 +255,7 @@ subroutine Driver_evolveFlash()
     end do
     call Grid_releaseTileIterator(itor)
     call assertEqual(cnt, 2, "Incorrect number of blocks")
-    
+
     call finish_test_run
 
 end subroutine Driver_evolveFlash

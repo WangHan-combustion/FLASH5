@@ -50,7 +50,7 @@ subroutine gr_markRefineDerefineCallback(lev, tags, time, tagval, clearval) bind
       ! Level must be 1-based index and limits/limitsGC must be 1-based also
       blockDesc%level = lev + 1
       blockDesc%grid_index = mfi%grid_index()
-      blockDesc%tile_index = INVALID_TILE_INDEX
+      blockDesc%tile_index = 0
       blockDesc%limits(LOW,  :) = 1
       blockDesc%limits(HIGH, :) = 1
       blockDesc%limits(LOW,  1:NDIM) = bx%lo(1:NDIM) + 1
