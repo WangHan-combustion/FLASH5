@@ -100,9 +100,9 @@ subroutine Driver_evolveFlash()
         fluxDataX(:, :, :, :) =  tileDesc%level
         fluxDataY(:, :, :, :) = -tileDesc%level
 
-        call tileDesc%releaseDataPtr(fluxDataX)
-        call tileDesc%releaseDataPtr(fluxDataY)
-        call tileDesc%releaseDataPtr(fluxDataZ)
+        call tileDesc%releaseDataPtr(fluxDataX, FLUXX)
+        call tileDesc%releaseDataPtr(fluxDataY, FLUXY)
+        call tileDesc%releaseDataPtr(fluxDataZ, FLUXZ)
 
         call itor%next()
     end do
@@ -131,8 +131,8 @@ subroutine Driver_evolveFlash()
             end do
         end associate
 
-        call tileDesc%releaseDataPtr(fluxDataX)
-        call tileDesc%releaseDataPtr(fluxDataY)
+        call tileDesc%releaseDataPtr(fluxDataX, FLUXX)
+        call tileDesc%releaseDataPtr(fluxDataY, FLUXY)
         
         call itor%next()
     end do
@@ -173,8 +173,8 @@ subroutine Driver_evolveFlash()
             end do
         end associate
 
-        call tileDesc%releaseDataPtr(fluxDataX)
-        call tileDesc%releaseDataPtr(fluxDataY)
+        call tileDesc%releaseDataPtr(fluxDataX, FLUXX)
+        call tileDesc%releaseDataPtr(fluxDataY, FLUXY)
         
         call itor%next()
     end do
@@ -352,8 +352,8 @@ subroutine Driver_evolveFlash()
             end do
         end associate
 
-        call tileDesc%releaseDataPtr(fluxDataX)
-        call tileDesc%releaseDataPtr(fluxDataY)
+        call tileDesc%releaseDataPtr(fluxDataX, FLUXX)
+        call tileDesc%releaseDataPtr(fluxDataY, FLUXY)
 
         call itor%next()
     end do
@@ -380,8 +380,8 @@ subroutine Driver_evolveFlash()
             end do
         end associate
 
-        call tileDesc%releaseDataPtr(fluxDataX)
-        call tileDesc%releaseDataPtr(fluxDataY)
+        call tileDesc%releaseDataPtr(fluxDataX, FLUXX)
+        call tileDesc%releaseDataPtr(fluxDataY, FLUXY)
 
         call itor%next()
     end do

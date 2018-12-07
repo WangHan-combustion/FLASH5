@@ -244,37 +244,28 @@ contains
 
         class(flash_tile_t), intent(IN),  target   :: this
         real(wp),                         pointer  :: dataPtr(:, :, :, :)
-        integer,             intent(IN),  optional :: gridDataStruct
+        integer,             intent(IN)            :: gridDataStruct
 
-        integer :: gds
-        integer, pointer :: lo(:)
+        integer :: lo(1:MDIM)
 
         ! Avoid possible memory leaks
         if (associated(dataPtr)) then
             call Driver_abortFlash("[getDataPtr] Given data pointer must be NULL")
         end if
 
-        nullify(lo)
-        nullify(dataPtr)
-
-        if(present(gridDataStruct)) then
-           gds = gridDataStruct
-        else
-           gds = CENTER
-        end if
-
-        lo => this%blkLimitsGC(LOW, :)
-        ! These multifabs are hardwired at creation to not have guardcells
-        if (     (gds == SCRATCH_CTR) .OR. (gds == FLUXX) & 
-            .OR. (gds == FLUXY)       .OR. (gds == FLUXZ)) then
-           lo => this%limits(LOW, :)
+        lo = this%blkLimitsGC(LOW, :)
+        ! These multifabs are hardwired at creation so that the FAB data only
+        ! exists for the block interiors
+        if (     (gridDataStruct == SCRATCH_CTR) .OR. (gridDataStruct == FLUXX) & 
+            .OR. (gridDataStruct == FLUXY)       .OR. (gridDataStruct == FLUXZ)) then
+           lo(1:NDIM) = lo(1:NDIM) + NGUARD
         end if
   
         ! Multifab arrays use 0-based level index set (AMReX) instead of 
         ! 1-based set (FLASH/block)
         associate (ilev => this%level - 1, &
                    igrd => this%grid_index)
-          select case (gds)
+          select case (gridDataStruct)
           case(CENTER)
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => unk     (ilev)%dataptr(igrd)
           case(FACEX)
@@ -296,15 +287,19 @@ contains
              nullify(dataPtr)
 #endif
           case(FLUXX)
+#if NFLUXES > 0
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => fluxes(ilev, IAXIS)%dataptr(igrd)
+#else
+             nullify(dataPtr)
+#endif
           case(FLUXY)
-#if NDIM >= 2
+#if NFLUXES > 0 && NDIM >= 2
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => fluxes(ilev, JAXIS)%dataptr(igrd)
 #else
              nullify(dataPtr)
 #endif
           case(FLUXZ)
-#if NDIM == 3
+#if NFLUXES > 0 && NDIM == 3
              dataPtr(lo(1):, lo(2):, lo(3):, 1:) => fluxes(ilev, KAXIS)%dataptr(igrd)
 #else
              nullify(dataPtr)
@@ -322,7 +317,7 @@ contains
 
         class(flash_tile_t), intent(IN)            :: this
         real(wp),            intent(OUT), pointer  :: dataPtr(:, :, :, :)
-        integer,             intent(IN),  optional :: gridDataStruct
+        integer,             intent(IN)            :: gridDataStruct
 
         nullify(dataPtr)
     end subroutine releaseDataPtr

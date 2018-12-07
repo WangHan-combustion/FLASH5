@@ -340,7 +340,7 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
     if (needEos .AND. needConversion) then
        do while (itor%isValid())
           call itor%currentTile(tileDesc)
-          call tileDesc%getDataPtr(solnData)
+          call tileDesc%getDataPtr(solnData, CENTER)
 
           ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
@@ -369,13 +369,13 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
           call Eos_guardCells(gcEosMode, solnData, corners=.true., &
                               layers=returnLayers)
 
-          call tileDesc%releaseDataPtr(solnData)
+          call tileDesc%releaseDataPtr(solnData, CENTER)
           call itor%next()
        end do
     else if (needEos .AND. (.NOT. needConversion)) then
        do while (itor%isValid())
           call itor%currentTile(tileDesc)
-          call tileDesc%getDataPtr(solnData)
+          call tileDesc%getDataPtr(solnData, CENTER)
 
           ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
@@ -397,13 +397,13 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
           call Eos_guardCells(gcEosMode, solnData, corners=.true., &
                               layers=returnLayers)
 
-          call tileDesc%releaseDataPtr(solnData)
+          call tileDesc%releaseDataPtr(solnData, CENTER)
           call itor%next()
        end do
     else if (needConversion) then
        do while (itor%isValid())
           call itor%currentTile(tileDesc)
-          call tileDesc%getDataPtr(solnData)
+          call tileDesc%getDataPtr(solnData, CENTER)
 
           ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
@@ -428,13 +428,13 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
                                   tileDesc%limitsGC(HIGH, :), &
                                   NUNK_VARS)
 
-          call tileDesc%releaseDataPtr(solnData)
+          call tileDesc%releaseDataPtr(solnData, CENTER)
           call itor%next()
        end do
     else
        do while (itor%isValid())
           call itor%currentTile(tileDesc)
-          call tileDesc%getDataPtr(solnData)
+          call tileDesc%getDataPtr(solnData, CENTER)
 
           ! DEV: FIXME Should the second limitsGC pair be blkLimitsGC?
           call gr_cleanDensityData(gr_smallrho, &
@@ -452,7 +452,7 @@ subroutine Grid_fillGuardCells(gridDataStruct, idir, &
                                   tileDesc%limitsGC(HIGH, :), &
                                   NUNK_VARS)
 
-          call tileDesc%releaseDataPtr(solnData)
+          call tileDesc%releaseDataPtr(solnData, CENTER)
           call itor%next()
        end do
     end if

@@ -91,7 +91,7 @@ subroutine gr_markRefineDerefineCallback(lev, tags, time, tagval, clearval) bind
         end do
       end associate
 
-      call blockDesc%releaseDataPtr(solnData)
+      call blockDesc%releaseDataPtr(solnData, CENTER)
    end do
    call amrex_mfiter_destroy(mfi)
 

@@ -324,7 +324,7 @@ subroutine Driver_evolveFlash()
             end do
         end associate
         
-        call tileDesc%releaseDataPtr(solnData)
+        call tileDesc%releaseDataPtr(solnData, CENTER)
 
         call itor%next()
     end do

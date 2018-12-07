@@ -253,7 +253,7 @@ subroutine Driver_evolveFlash()
     call Grid_getTileIterator(itor, LEAF, tiling=.FALSE.)
     do while (itor%isValid())
         call itor%currentTile(tileDesc)
-        call tileDesc%getDataPtr(solnData)
+        call tileDesc%getDataPtr(solnData, CENTER)
 
         associate(lo => tileDesc%limits(LOW, :), &
                   hi => tileDesc%limits(HIGH, :))
@@ -270,7 +270,7 @@ subroutine Driver_evolveFlash()
             end do
         end associate
 
-        call tileDesc%releaseDataPtr(solnData)
+        call tileDesc%releaseDataPtr(solnData, CENTER)
 
         call itor%next()
     end do

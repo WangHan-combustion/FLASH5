@@ -40,12 +40,12 @@ subroutine sim_advance(step, points, values, set_msg, leaf_msg)
     call Grid_getTileIterator(itor, LEAF, tiling=.FALSE.)
     do while (itor%isValid())
         call itor%currentTile(tileDesc)
-        call tileDesc%getDataPtr(solnData)
+        call tileDesc%getDataPtr(solnData, CENTER)
 
         solnData(:,:,:,:) = 0.0
         call sim_writeDataPoints(solnData, tileDesc, points, values)
 
-        call tileDesc%releaseDataPtr(solnData)
+        call tileDesc%releaseDataPtr(solnData, CENTER)
         call itor%next()
     end do
     call Grid_releaseTileIterator(itor)

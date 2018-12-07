@@ -19,7 +19,7 @@
 !!  2D run:
 !!     ./setup -auto -2d -nxb=8 -nyb=8 
 !!              unitTest/Grid/Amrex/TestTiling
-!!             +noio -index-reorder
+!!             +uhd +noio -index-reorder
 !!
 !!***
 
@@ -48,7 +48,12 @@ subroutine Driver_evolveFlash()
     type(amrex_box) :: tileBox
     type(amrex_box) :: encBox
 
+    real, pointer :: solnData(:,:,:,:)
+    integer       :: bnd(1:4)
+
     integer :: axis
+
+    nullify(solnData)
 
     call start_test_run
 
@@ -63,7 +68,7 @@ subroutine Driver_evolveFlash()
     call assertEqual(NYB, 8, "Invalid number of cells/block in Y")
     call assertEqual(NZB, 1, "Invalid number of cells/block in Z")
 
-    call assertEqual(NGUARD, 2, "Invalid number of guardcells")
+    call assertEqual(NGUARD, 4, "Invalid number of guardcells")
 
     ! *NO* TILING ITERATION
     ! -----------------------------------------------------------------------
@@ -129,6 +134,29 @@ subroutine Driver_evolveFlash()
                             "Bad enclosed block blkLimitsGC HIGH")
         end associate
 
+        ! Confirm that the UNK data pointer is for the FAB of the enclosing
+        ! block and including the block's GC
+        call tileDesc%getDataPtr(solnData, CENTER)
+        call assertTrue(associated(solnData), "Unable to get cell-centered data")
+        bnd = lbound(solnData)
+        call assertTrue( ALL(bnd(1:MDIM) == tileDesc%blkLimitsGC(LOW,  1:MDIM)), &
+                         "lbound of data pointer is wrong size")
+        bnd = ubound(solnData)
+        call assertTrue( ALL(bnd(1:MDIM) == tileDesc%blkLimitsGC(HIGH, 1:MDIM)), &
+                         "ubound of data pointer is wrong size")
+        call tileDesc%releaseDataPtr(solnData, CENTER)
+
+        ! The flux multifabs do not contain GC data.  Confirm that the FAB
+        ! has the size of the enclosing block rather than the size of the
+        ! tile
+        call tileDesc%getDataPtr(solnData, FLUXX)
+        call assertTrue(associated(solnData), "Unable to get FACEX data")
+        bnd = ubound(solnData) - lbound(solnData) + 1
+        call assertEqual(NXB+1, bnd(IAXIS), "Wrong flux FAB X size")
+        call assertEqual(NYB,   bnd(JAXIS), "Wrong flux FAB Y size")
+        call assertEqual(NZB,   bnd(KAXIS), "Wrong flux FAB Z size")
+        call tileDesc%releaseDataPtr(solnData, FLUXX)
+
         cnt = cnt + 1
 
         call itor%next()
@@ -158,21 +186,21 @@ subroutine Driver_evolveFlash()
             ! Confirm that the grown tile has been grown appropriately
             ! Two blocks in x direction
             if      (lo(IAXIS) == 1) then
-                call assertEqual(-1, loGC(IAXIS), "Invalid grown tile lo x")
+                call assertEqual(-3, loGC(IAXIS), "Invalid grown tile lo x")
                 call assertEqual( 4, hiGC(IAXIS), "Invalid grown tile hi x")
             else if (lo(IAXIS) == 5) then
                 call assertEqual( 5, loGC(IAXIS), "Invalid grown tile lo x")
-                call assertEqual(10, hiGC(IAXIS), "Invalid grown tile hi x")
+                call assertEqual(12, hiGC(IAXIS), "Invalid grown tile hi x")
             else if (lo(IAXIS) == 9) then
-                call assertEqual( 7, loGC(IAXIS), "Invalid grown tile lo x")
+                call assertEqual( 5, loGC(IAXIS), "Invalid grown tile lo x")
                 call assertEqual(12, hiGC(IAXIS), "Invalid grown tile hi x")
             else if (lo(IAXIS) == 13) then
                 call assertEqual(13, loGC(IAXIS), "Invalid grown tile lo x")
-                call assertEqual(18, hiGC(IAXIS), "Invalid grown tile hi x")
+                call assertEqual(20, hiGC(IAXIS), "Invalid grown tile hi x")
             end if
 
             if      (lo(JAXIS) == 1) then
-                call assertEqual(-1, loGC(JAXIS), "Invalid grown tile lo y")
+                call assertEqual(-3, loGC(JAXIS), "Invalid grown tile lo y")
                 call assertEqual( 2, hiGC(JAXIS), "Invalid grown tile hi y")
             else if (lo(JAXIS) == 3) then
                 call assertEqual( 3, loGC(JAXIS), "Invalid grown tile lo y")
@@ -182,7 +210,7 @@ subroutine Driver_evolveFlash()
                 call assertEqual( 6, hiGC(JAXIS), "Invalid grown tile hi y")
             else if (lo(JAXIS) == 7) then
                 call assertEqual( 7, loGC(JAXIS), "Invalid grown tile lo y")
-                call assertEqual(10, hiGC(JAXIS), "Invalid grown tile hi y")
+                call assertEqual(12, hiGC(JAXIS), "Invalid grown tile hi y")
             end if
 
             call assertEqual(1, loGC(KAXIS), "Invalid grown tile lo z")
@@ -233,6 +261,30 @@ subroutine Driver_evolveFlash()
             call assertTrue(ALL(tileDesc%blkLimitsGC(HIGH, :) == encBlk%limitsGC(HIGH, :)), &
                             "tile blkLimitsGC high != enc block limitsGC high")
         end associate
+
+        ! Confirm that the UNK data pointer is for the FAB of the enclosing
+        ! block and including the block's GC.  It should not be set relative to
+        ! the tile size
+        call tileDesc%getDataPtr(solnData, CENTER)
+        call assertTrue(associated(solnData), "Unable to get cell-centered data")
+        bnd = lbound(solnData)
+        call assertTrue( ALL(bnd(1:MDIM) == tileDesc%blkLimitsGC(LOW,  1:MDIM)), &
+                         "lbound of data pointer is wrong size")
+        bnd = ubound(solnData)
+        call assertTrue( ALL(bnd(1:MDIM) == tileDesc%blkLimitsGC(HIGH, 1:MDIM)), &
+                         "ubound of data pointer is wrong size")
+        call tileDesc%releaseDataPtr(solnData, CENTER)
+
+        ! The flux multifabs do not contain GC data.  Confirm that the FAB
+        ! has the size of the enclosing block rather than the size of the
+        ! tile
+        call tileDesc%getDataPtr(solnData, FLUXX)
+        call assertTrue(associated(solnData), "Unable to get FACEX data")
+        bnd = ubound(solnData) - lbound(solnData) + 1
+        call assertEqual(NXB+1, bnd(IAXIS), "Wrong flux FAB X size")
+        call assertEqual(NYB,   bnd(JAXIS), "Wrong flux FAB Y size")
+        call assertEqual(NZB,   bnd(KAXIS), "Wrong flux FAB Z size")
+        call tileDesc%releaseDataPtr(solnData, FLUXX)
 
         cnt = cnt + 1
 

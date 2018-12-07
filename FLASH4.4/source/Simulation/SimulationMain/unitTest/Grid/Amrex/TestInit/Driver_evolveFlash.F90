@@ -407,7 +407,7 @@ subroutine Driver_evolveFlash()
                     end do
                 end do
             end do
-        call blockDesc%releaseDataPtr(solnData)
+        call blockDesc%releaseDataPtr(solnData, CENTER)
     !!!!! CONFIRM PROPER INITIAL CONDITIONS for FACEVARS
 #if NFACE_VARS>0
         call blockDesc%getDataPtr(solnData, FACEX)
