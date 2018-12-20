@@ -212,10 +212,10 @@ subroutine Grid_init()
 !------------------------------------------------------------------------------
 ! Load into local Grid variables all runtime parameters needed by gr_amrexInit
 !------------------------------------------------------------------------------
-  call RuntimeParameters_get("gr_amrexUseTiling", gr_enableTiling)
-  call RuntimeParameters_get("gr_amrexTileSizeX", gr_tileSize(IAXIS))
-  call RuntimeParameters_get("gr_amrexTileSizeY", gr_tileSize(JAXIS))
-  call RuntimeParameters_get("gr_amrexTileSizeZ", gr_tileSize(KAXIS))
+  call RuntimeParameters_get("gr_useTiling", gr_enableTiling)
+  call RuntimeParameters_get("gr_tileSizeX", gr_tileSize(IAXIS))
+  call RuntimeParameters_get("gr_tileSizeY", gr_tileSize(JAXIS))
+  call RuntimeParameters_get("gr_tileSizeZ", gr_tileSize(KAXIS))
   write(*,*) "Block size = ", NXB, NYB, NZB
   write(*,*) "Tile size  = ", gr_tileSize
 
