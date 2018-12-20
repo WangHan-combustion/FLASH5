@@ -44,7 +44,7 @@ subroutine Simulation_initBlock(initData, tileDesc)
             do         k = lo(KAXIS), hi(KAXIS)
                 do     j = lo(JAXIS), hi(JAXIS)
                     do i = lo(IAXIS), hi(IAXIS)
-                        initData(i, j, k, var) = 1.1 * var
+                       initData(i, j, k, var) = (i + j + k)*var
                     end do
                 end do
             end do
