@@ -37,14 +37,16 @@
 !!
 !!***
 
-subroutine Grid_getTileIterator(itor, level, tiling)
+subroutine Grid_getTileIterator(itor, nodetype, level, tiling, tileSize)
   use flash_iterator, ONLY : flash_iterator_t
 
   implicit none
 
   type(flash_iterator_t), intent(OUT)          :: itor
+  integer,                intent(IN)           :: nodetype
   integer,                intent(IN), optional :: level
   logical,                intent(IN), optional :: tiling
+  integer,                intent(IN), optional :: tileSize(1:MDIM)
 
   return
 end subroutine Grid_getTileIterator

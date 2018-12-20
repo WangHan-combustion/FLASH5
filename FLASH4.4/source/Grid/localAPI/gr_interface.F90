@@ -477,7 +477,7 @@ module gr_interface
       integer,             intent(IN), optional :: nodetype
       integer,             intent(IN), optional :: level
       logical,             intent(IN), optional :: tiling
-      integer,             intent(IN), optional :: tileSize
+      integer,             intent(IN), optional :: tileSize(1:MDIM)
     end subroutine gr_getBlkIterator
   end interface
 

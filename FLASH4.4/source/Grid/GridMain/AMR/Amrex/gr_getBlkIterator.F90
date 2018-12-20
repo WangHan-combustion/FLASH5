@@ -55,7 +55,7 @@ subroutine gr_getBlkIterator(itor, nodetype, level, tiling, tileSize)
   integer,             intent(IN), optional :: nodetype
   integer,             intent(IN), optional :: level
   logical,             intent(IN), optional :: tiling
-  integer,             intent(IN), optional :: tileSize
+  integer,             intent(IN), optional :: tileSize(1:MDIM)
 
   integer :: ntype
   
@@ -78,8 +78,10 @@ subroutine gr_getBlkIterator(itor, nodetype, level, tiling, tileSize)
     myTiling = tiling
   end if
 
-  if (.NOT. present(tileSize)) then
-    myTileSize = [gr_tileSize(IAXIS), gr_tileSize(JAXIS), gr_tileSize(KAXIS)]
+  if (present(tileSize)) then
+    myTileSize = tileSize 
+  else
+    myTileSize = gr_tileSize
   end if
 
   call build_iterator(itor, ntype, myLevel, myTiling, myTileSize)

@@ -71,7 +71,7 @@ subroutine gr_getBlkIterator(itor, nodetype, level, tiling)
   type(gr_iterator_t), intent(OUT)          :: itor
   integer,             intent(IN), optional :: nodetype
   integer,             intent(IN), optional :: level
-  logical,             intent(IN), optional :: tiling
+  logical,             intent(IN), optional :: tiling(1:MDIM)
 
   return
 end subroutine gr_getBlkIterator

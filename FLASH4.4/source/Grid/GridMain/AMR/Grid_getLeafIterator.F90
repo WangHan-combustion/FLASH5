@@ -46,8 +46,8 @@ subroutine Grid_getLeafIterator(itor, level, tiling, tileSize)
   type(leaf_iterator_t), intent(OUT)          :: itor
   integer,               intent(IN), optional :: level
   logical,               intent(IN), optional :: tiling
-  integer,               intent(IN), optional :: tileSize
-  
+  integer,               intent(IN), optional :: tileSize(1:MDIM)
+
   integer :: myLevel
   logical :: myTiling
   integer :: myTileSize(1:MDIM)
@@ -62,10 +62,12 @@ subroutine Grid_getLeafIterator(itor, level, tiling, tileSize)
     myTiling = tiling
   end if
 
-  if (.NOT. present(tileSize)) then
-    myTileSize = [gr_tileSize(IAXIS), gr_tileSize(JAXIS), gr_tileSize(KAXIS)]
+  if (present(tileSize)) then
+    myTileSize = tileSize 
+  else
+    myTileSize = gr_tileSize
   end if
-  
+
   call build_iterator(itor, myLevel, myTiling, myTileSize)
 end subroutine Grid_getLeafIterator
 

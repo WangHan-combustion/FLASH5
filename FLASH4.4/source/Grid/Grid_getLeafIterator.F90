@@ -34,7 +34,7 @@
 !!
 !!***
 
-subroutine Grid_getLeafIterator(itor, level, tiling)
+subroutine Grid_getLeafIterator(itor, level, tiling, tileSize)
   use leaf_iterator, ONLY : leaf_iterator_t
 
   implicit none
@@ -42,6 +42,7 @@ subroutine Grid_getLeafIterator(itor, level, tiling)
   type(leaf_iterator_t), intent(OUT)          :: itor
   integer,               intent(IN), optional :: level
   logical,               intent(IN), optional :: tiling
+  integer,               intent(IN), optional :: tileSize(1:MDIM)
 
   return
 end subroutine Grid_getLeafIterator
