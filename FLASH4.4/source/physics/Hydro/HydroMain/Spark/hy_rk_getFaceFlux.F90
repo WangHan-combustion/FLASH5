@@ -6,7 +6,11 @@
 !!
 !!  SYNOPSIS
 !!
+<<<<<<< HEAD
 !!  call hy_rk_getFaceFlux ( integer(IN) :: blockDesc )
+=======
+!!  call hy_rk_getFaceFlux ( integer(IN) :: blockID )
+>>>>>>> ed1d35d88e109243a98b958c7a7fc422303dadb2
 !!
 !!  DESCRIPTION
 !!
@@ -23,6 +27,7 @@ subroutine hy_rk_getFaceFlux (blockDesc, limits)
        hy_starState, hy_grav, hy_flattening
   use Timers_interface, ONLY : Timers_start, Timers_stop
   use block_metadata, ONLY: block_metadata_t
+
   implicit none
 
 #include "Flash.h"
@@ -44,18 +49,22 @@ subroutine hy_rk_getFaceFlux (blockDesc, limits)
 !!$       GRID_KLO_GC:GRID_KHI_GC)
 
   real, allocatable, dimension(:,:,:) :: faceAreas, flat3d
+
   integer, dimension(MDIM) :: datasize
   real, dimension(MDIM) :: del
 
   ! 1D pencil of data
   integer :: size1d
+
   real, allocatable,dimension(:,:) :: pencil
+
   integer, dimension(LOW:HIGH,MDIM) :: dirLims
   real, dimension(NRECON) :: leftState, rightState
   real, dimension(NRECON) :: uPlus, uMinus
   real :: speed
   real, allocatable :: grv(:), shck(:), flat(:)
   logical :: inShock
+
 !!$  real :: flat3d(GRID_IHI_GC,GRID_JHI_GC,GRID_KHI_GC)
 
   !! DEVNOTE AD: This is where one needs to figure out setting up the blockLimits locally or globally
@@ -90,6 +99,7 @@ subroutine hy_rk_getFaceFlux (blockDesc, limits)
   do dir = 1, NDIM
      call setLoop(dir, dirLims)
      !$omp do schedule(guided) collapse(2)
+
      do i3 = dirLims(LOW,KAXIS), dirLims(HIGH,KAXIS)
         do i2 = dirLims(LOW,JAXIS), dirLims(HIGH,JAXIS)
            call setPencil(pencil,grv,shck,flat,i2,i3,dir)
