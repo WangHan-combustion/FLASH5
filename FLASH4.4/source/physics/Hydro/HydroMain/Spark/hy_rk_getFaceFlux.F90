@@ -6,7 +6,7 @@
 !!
 !!  SYNOPSIS
 !!
-!!  call hy_rk_getFaceFlux ( integer(IN) :: blockID )
+!!  call hy_rk_getFaceFlux ( integer(IN) :: blockDesc )
 !!
 !!  DESCRIPTION
 !!
@@ -14,7 +14,7 @@
 !!
 !!
 !!***
-subroutine hy_rk_getFaceFlux (blockID, limits)
+subroutine hy_rk_getFaceFlux (blockDesc, limits)
 
   use Grid_interface, ONLY : Grid_getBlkIndexLimits, Grid_getDeltas, &
        Grid_getBlkData, Grid_putFluxData
@@ -22,7 +22,7 @@ subroutine hy_rk_getFaceFlux (blockID, limits)
        hy_flx, hy_fly, hy_flz, hy_threadWithinBlock, hy_limRad, &
        hy_starState, hy_grav, hy_flattening
   use Timers_interface, ONLY : Timers_start, Timers_stop
-
+  use block_metadata, ONLY: block_metadata_t
   implicit none
 
 #include "Flash.h"
@@ -30,7 +30,7 @@ subroutine hy_rk_getFaceFlux (blockID, limits)
 #include "Spark.h"
 #define NRECON HY_NUM_VARS+NSPECIES+NMASS_SCALARS
 
-  integer, intent(IN) :: blockID
+  type(block_metadata_t), intent(IN) :: blockDesc
   integer, intent(IN), dimension(LOW:HIGH,MDIM) :: limits
 
   integer, dimension(LOW:HIGH,MDIM) :: blkLimits, blkLimitsGC
@@ -39,29 +39,36 @@ subroutine hy_rk_getFaceFlux (blockID, limits)
 
   real, dimension(NFLUXES) :: flux
 
-  real :: faceAreas(GRID_ILO_GC:GRID_IHI_GC,     &
-       GRID_JLO_GC:GRID_JHI_GC,     &
-       GRID_KLO_GC:GRID_KHI_GC)
+!!$  real :: faceAreas(GRID_ILO_GC:GRID_IHI_GC,     &
+!!$       GRID_JLO_GC:GRID_JHI_GC,     &
+!!$       GRID_KLO_GC:GRID_KHI_GC)
 
+  real, allocatable, dimension(:,:,:) :: faceAreas, flat3d
   integer, dimension(MDIM) :: datasize
   real, dimension(MDIM) :: del
 
   ! 1D pencil of data
   integer :: size1d
-  real, allocatable :: pencil(:,:)
+  real, allocatable,dimension(:,:) :: pencil
   integer, dimension(LOW:HIGH,MDIM) :: dirLims
   real, dimension(NRECON) :: leftState, rightState
   real, dimension(NRECON) :: uPlus, uMinus
   real :: speed
   real, allocatable :: grv(:), shck(:), flat(:)
   logical :: inShock
-  real :: flat3d(GRID_IHI_GC,GRID_JHI_GC,GRID_KHI_GC)
+!!$  real :: flat3d(GRID_IHI_GC,GRID_JHI_GC,GRID_KHI_GC)
 
-  call Grid_getBlkIndexLimits(blockID,blkLimits,blkLimitsGC)
-  call Grid_getDeltas(blockID,del)
+  !! DEVNOTE AD: This is where one needs to figure out setting up the blockLimits locally or globally
+  blkLimits(:,:)=blockDesc%localLimits
+  blkLimitsGC(:,:)=blockDesc%localLimitsGC
+  call Grid_getDeltas(blockDesc%level,del)
 
   datasize(1:MDIM) = blkLimitsGC(HIGH,1:MDIM)-blkLimitsGC(LOW,1:MDIM)+1
   size1d = maxval(datasize)
+  allocate(flat3d(datasize(IAXIS),datasize(JAXIS),datasize(KAXIS)))
+
+  allocate(faceAreas(datasize(IAXIS),datasize(JAXIS),datasize(KAXIS)))
+  
   allocate(pencil(NRECON,size1d))
   allocate(grv(size1d))
   allocate(shck(size1d))
@@ -83,15 +90,15 @@ subroutine hy_rk_getFaceFlux (blockID, limits)
   do dir = 1, NDIM
      call setLoop(dir, dirLims)
      !$omp do schedule(guided) collapse(2)
-     do i3 = dirLims(LOW,3), dirLims(HIGH,3)
-        do i2 = dirLims(LOW,2), dirLims(HIGH,2)
+     do i3 = dirLims(LOW,KAXIS), dirLims(HIGH,KAXIS)
+        do i2 = dirLims(LOW,JAXIS), dirLims(HIGH,JAXIS)
            call setPencil(pencil,grv,shck,flat,i2,i3,dir)
            !call setHSE(pencil,grv,dirLims(LOW,1)-1,del(dir))
-           i1 = dirLims(LOW,1)-1
+           i1 = dirLims(LOW,IAXIS)-1
            call reconstruct(uPlus, uMinus, &
                 pencil, flat(i1), size1d, i1, del(dir))
            !call resetHSE(pencil,grv,dirLims(LOW,1)-1,del(dir))
-           do i1 = dirLims(LOW,1), dirLims(HIGH,1)+1
+           do i1 = dirLims(LOW,IAXIS), dirLims(HIGH,IAXIS)+1
               ! cycle left-right state vectors
               leftState = uPlus
               ! Now do the reconstruction for ALL variables in one call
@@ -132,6 +139,8 @@ subroutine hy_rk_getFaceFlux (blockID, limits)
   end do ! dir
   !$omp end parallel
 
+  deallocate(flat3d)
+  deallocate(faceAreas)
   deallocate(pencil)
   deallocate(grv)
   deallocate(shck)
