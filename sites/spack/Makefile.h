@@ -63,14 +63,14 @@ else
 ifneq (${IS_FCOMP_PGI}, 0)
 
 LINK = mpif90 \
--fast -Mvect=simd -Mcache_align -Mflushz -Mpre \
--acc -ta=tesla:cc60 -ta=tesla:nordc -Minfo=all
+-fast -Mvect=simd -Mcache_align -Mflushz \
+-acc -ta=tesla:cc70,cuda9.2,ptxinfo -Minfo=all
 # -mp
 
 FFLAGS_OPT = -g -c -O 4 -r8 -i4 \
 $(shell echo -I${CPATH} | sed 's|:| -I|g') \
--fast -Mvect=simd -Mcache_align -Mflushz -Mpre \
--acc -ta=tesla:cc60 -ta=tesla:nordc -Minfo=all
+-fast -Mvect=simd -Mcache_align -Mflushz \
+-acc -ta=tesla:cc70,cuda9.2,ptxinfo -Minfo=all
 # -mp
 
 FFLAGS_DEBUG = -g -c -O0 -r8 -i4 \
