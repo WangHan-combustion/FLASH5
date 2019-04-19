@@ -127,7 +127,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
        case (GRID_PDE_BND_DIRICHLET)
           amrexPoissonBcTypes(i)=amrex_lo_dirichlet
        case default
-          call Driver_abortFlash('BC not implemented for AMReX poisson solver!')
+          call Driver_abortFlash('[Grid_solvePoisson] BC not implemented for HYPRE poisson solver!')
        end select
      end do
      call poisson % set_domain_bc([amrexPoissonBcTypes(1),amrexPoissonBcTypes(3),amrexPoissonBcTypes(5)], &
@@ -146,7 +146,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
        call multigrid % set_max_fmg_iter(gr_amrexLs_max_fmg_iter)
        call multigrid % set_bottom_solver(amrex_bottom_hypre)
 
-       if(gr_globalMe .eq. MASTER_PE) print*, "Calling multigrid solve, maxlev", maxLevel
+       if(gr_globalMe .eq. MASTER_PE) print*, "Calling HYPRE poisson solve..."
        err = multigrid % solve(solution, rhs, 1.e-10_amrex_real, 0.0_amrex_real)
        if(gr_globalMe .eq. MASTER_PE) print*, err
        call amrex_multigrid_destroy(multigrid)
@@ -167,7 +167,7 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
        case (GRID_PDE_BND_DIRICHLET)
           amrexPoissonBcTypes(i)=amrex_lo_dirichlet
        case default
-          call Driver_abortFlash('Only periodic BC implemented for AMReX poissonsolver!')
+          call Driver_abortFlash('[Grid_solvePoisson] BC not implemented for HYPRE poisson solver!')
        end select
        end do
        call poisson %set_domain_bc([amrexPoissonBcTypes(1),amrexPoissonBcTypes(3),amrexPoissonBcTypes(5)],&
