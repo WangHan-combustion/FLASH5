@@ -47,8 +47,8 @@ subroutine Grid_solvePoisson (iSoln, iSrc, bcTypes, bcValues, poisfact)
   use Grid_interface,   ONLY : GRID_PDE_BND_PERIODIC,  &
        GRID_PDE_BND_NEUMANN,   &
        GRID_PDE_BND_DIRICHLET
-  use amrex_multigrid_module, ONLY : amrex_multigrid, amrex_multigrid_build, amrex_multigrid_destroy,
-                                     amrex_bottom_hypre, amrex_bottom_cg, amrex_bottom_bicgstab,
+  use amrex_multigrid_module, ONLY : amrex_multigrid, amrex_multigrid_build, amrex_multigrid_destroy,&
+                                     amrex_bottom_hypre, amrex_bottom_cg, amrex_bottom_bicgstab,&
                                      amrex_bottom_smoother !, amrex_bottom_petsc
   use amrex_poisson_module, ONLY : amrex_poisson, amrex_poisson_build, amrex_poisson_destroy
   use amrex_lo_bctypes_module, ONLY : amrex_lo_periodic, amrex_lo_dirichlet, amrex_lo_neumann
